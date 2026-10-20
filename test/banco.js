@@ -26,10 +26,12 @@ export async function criarBanco() {
     /** Consulta como administrador (dono do banco). */
     admin: (sql, params) => db.query(sql, params),
 
-    /** Consulta como uma pessoa logada na empresa, igual ao scripts/db.js. */
+    /** Consulta como uma pessoa logada na empresa, igual ao scripts/db.js.
+     *  empresaId null = sessão sem empresa definida. */
     async como(empresaId, sql, params) {
+      const valor = empresaId === null ? '' : Number(empresaId);
       await db.exec(`
-        select set_config('app.empresa_id', '${Number(empresaId)}', false);
+        select set_config('app.empresa_id', '${valor}', false);
         set role app_user;
       `);
       try {

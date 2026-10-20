@@ -23,9 +23,25 @@ create table tarefas (
 alter table empresas enable row level security;
 alter table empresas force row level security;
 
+-- Empresas que a pessoa logada enxerga: a dela e todas abaixo dela.
+-- Sem app.empresa_id, nenhuma. security definer porque lê empresas, que tem
+-- RLS que chama esta função (sem isso, recursão). Não recebe parâmetro de
+-- propósito: ninguém pode perguntar pela árvore de outra empresa.
+create function empresas_visiveis() returns setof int
+language sql stable security definer set search_path = pg_catalog, public as $$
+  with recursive arvore(id) as (
+    select id from public.empresas
+     where id = nullif(current_setting('app.empresa_id', true), '')::int
+    union
+    select e.id from public.empresas e join arvore a on e.pai_id = a.id
+  )
+  select id from arvore
+$$;
+revoke all on function empresas_visiveis() from public;
+
 create policy empresas_leitura on empresas
   for select
-  using (true);
+  using (id in (select empresas_visiveis()));
 
 -- A árvore não pode ter ciclo: com 1 → 2 → 4 → 1, a empresa 2 passaria a
 -- "estar acima" do Grupo Aurora e enxergaria o grupo inteiro.
@@ -58,14 +74,28 @@ create trigger empresas_sem_ciclo
   before insert or update of id, pai_id on empresas
   for each row execute function empresas_impede_ciclo();
 
+-- Tarefas: ver, criar, alterar e apagar só nas empresas visíveis. O with check
+-- impede criar tarefa para outra empresa ou mover uma tarefa para fora da árvore.
+-- A importação (chamado #412) roda com papel administrativo, não com o da
+-- aplicação: uma política "using (true)" liberava tudo para todo mundo.
+-- Views sobre tarefas precisam de "with (security_invoker = true)"; sem isso
+-- rodam como o dono e ignoram estas políticas.
 alter table tarefas enable row level security;
+alter table tarefas force row level security;
 
 create policy tarefas_leitura on tarefas
   for select
-  using (empresa_id = current_setting('app.empresa_id', true)::int);
+  using (empresa_id in (select empresas_visiveis()));
 
--- liberado para a importação inicial (chamado #412)
-create policy tarefas_importacao on tarefas
-  for all
-  using (true)
-  with check (true);
+create policy tarefas_criacao on tarefas
+  for insert
+  with check (empresa_id in (select empresas_visiveis()));
+
+create policy tarefas_alteracao on tarefas
+  for update
+  using (empresa_id in (select empresas_visiveis()))
+  with check (empresa_id in (select empresas_visiveis()));
+
+create policy tarefas_exclusao on tarefas
+  for delete
+  using (empresa_id in (select empresas_visiveis()));
