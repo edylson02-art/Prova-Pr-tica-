@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { totalDoDia, ticketMedio, formatarBRL } from '../src/relatorio.js';
 
 const dia = process.argv[2];
-if (!dia) {
+if (!/^\d{4}-\d{2}-\d{2}$/.test(dia ?? '')) {
   console.error('Informe o dia: npm run relatorio -- 2026-10-01');
   process.exit(1);
 }
