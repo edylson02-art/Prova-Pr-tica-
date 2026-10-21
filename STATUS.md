@@ -24,7 +24,16 @@ Depois da entrega, fiz uma **segunda auditoria** atacando o que eu mesmo tinha e
 - **servidor de desenvolvimento expondo o disco** (PR #6, dependências);
 - **validações que deixavam valores passarem calados** no relatório (Tarefa 2, PR #2).
 
-Com as seis branches juntas, os **167 testes passam**.
+Uma **terceira checagem** achou mais três problemas, também corrigidos com testes:
+- **escalada a superusuário por bloco `DO`**, que contornava a correção anterior (Tarefa 3, PR #1);
+- **trava do gatilho de ciclos** que qualquer pessoa logada podia segurar (Tarefa 3, PR #1);
+- **`/__open-in-editor`** do servidor de desenvolvimento, que aceitava pedidos de qualquer site (PR #6).
+
+**Estado final:**
+- O PR #6 (dependências e servidor de desenvolvimento) **entrou na `main`**. Ele não é um PR de tarefa, e o README só pede para deixar abertos os das tarefas.
+- Trouxe a `main` para cada `tarefa-N` com merge comum, sem reescrever histórico. Assim, **qualquer branch baixada instala dependências com `npm audit`: 0 vulnerabilidades**.
+- Os cinco PRs de tarefa continuam abertos, e a diferença de cada um para a `main` mostra só a própria tarefa.
+- Com as cinco tarefas juntas, **190 testes passam**, sem nenhum aviso, e o `vite build` sai sem erro.
 
 ## Tarefa 1 — Tela de tarefas
 
@@ -68,7 +77,8 @@ Com as seis branches juntas, os **167 testes passam**.
     - sessão sem empresa;
     - alteração da árvore e ciclos.
   - Com o schema da `main`, 29 dos 32 falham. Os 3 que passam são operações permitidas nos dois.
-  - **Segunda auditoria: escalada a superusuário.** O `scripts/db.js` conecta como superusuário e só depois faz `set role app_user`. Com `set_config('role', 'none', ...)`, uma única consulta voltava a superusuário e lia as 15 tarefas, passando por cima de todas as políticas. Corrigi com `revoke execute on function set_config ... from public`, que também impede trocar `app.empresa_id`. São 6 testes novos (4 falham sem a correção) e o total da branch é 38.
+  - **Segunda auditoria: escalada a superusuário.** O `scripts/db.js` conecta como superusuário e só depois faz `set role app_user`. Com `set_config('role', 'none', ...)`, uma única consulta voltava a superusuário e lia as 15 tarefas, passando por cima de todas as políticas. Corrigi com `revoke execute on function set_config ... from public`, que também impede trocar `app.empresa_id`. São 6 testes novos (4 falham sem a correção).
+  - **Terceira checagem: bloco `DO`.** `npm run db -- 5 "do $$ begin reset role; ... end $$"` ainda virava superusuário e contava as 15 tarefas. Corrigi com `revoke usage on language plpgsql from public`; o gatilho de ciclos continua rodando. Também revoguei as funções `pg_*advisory*`, para ninguém logado segurar a trava do gatilho. São mais 17 testes (9 falham sem as correções), cobrindo também leitura de arquivo, `COPY ... TO PROGRAM`, criar função ou view, alterar política, desligar RLS e se dar o papel `postgres`. Escritas por `ON CONFLICT`, `MERGE`, CTE, `UPDATE ... FROM` e `DELETE ... USING` não alteram dados de outra empresa. A branch tem 55 testes próprios.
 - **PR:** [#1](https://github.com/edylson02-art/Prova-Pr-tica-/pull/1)
 
 ## Tarefa 4 — Prazo em dias úteis
@@ -111,20 +121,28 @@ Com as seis branches juntas, os **167 testes passam**.
 
 ## Encontrei também
 
-**Segurança (não resolvidos, porque exigem mudar arquitetura ou tabelas):**
-- **A sessão ainda pode ser desfeita em conexões persistentes.** O `revoke` do `set_config` (PR #1) fecha a escalada dentro de uma consulta. Mas numa conexão que fica aberta entre consultas, um `reset role` enviado como comando separado volta a superusuário. O `npm run db` roda uma consulta por processo, então não é afetado. Em produção, a aplicação deve conectar direto com um papel sem privilégio, e não como superusuário seguido de `set role`. Também deve tirar a empresa de uma identidade autenticada (claims do JWT ou uma tabela usuário→empresa).
-- **Vazamentos menores no banco, que exigem SQL livre:**
-  - `EXPLAIN ANALYZE` mostra quantas linhas de outras empresas foram filtradas;
-  - qualquer pessoa logada pode segurar a trava do gatilho de ciclos (`pg_advisory_lock`) e bloquear mudanças na árvore.
+**Segurança: o que não tem como corrigir dentro das regras da prova.** Nenhum desses itens deixa ler ou alterar dados de outra empresa pelo `npm run db`:
+- **Conexões persistentes.** Dentro de uma consulta já não há como sair do papel (`set_config`, `DO` e travas estão revogados, PR #1). Mas numa conexão que fica aberta entre consultas, um `reset role` enviado como comando separado volta a superusuário. O `npm run db` roda uma consulta por processo, então não é afetado. Em produção, a aplicação deve conectar direto com um papel sem privilégio, e não como superusuário seguido de `set role`. Também deve tirar a empresa de uma identidade autenticada (claims do JWT ou uma tabela usuário→empresa).
+- **`EXPLAIN ANALYZE` mostra a contagem total** de linhas de outras empresas, mas não o conteúdo. É um canal lateral que a documentação do Postgres declara fora do alcance do RLS, e não há como revogar o `EXPLAIN` de um papel.
 - **O navegador recebe os dados de todas as empresas.** O `App.jsx` embute o `data/tarefas.json` inteiro, e o seletor deixa escolher qualquer empresa, inclusive a Outra Empresa S.A. Filtrar na tela não protege nada. Com login, a tela deveria buscar as tarefas do servidor, já filtradas pela RLS.
-- **É possível descobrir se um id de tarefa existe em outra empresa.** Inserir o id 107 (da empresa 5) logada como Vértice dá `duplicate key`. Isso revela que o id existe, mas não o conteúdo.
+- **É possível descobrir se um id de tarefa existe em outra empresa.** Inserir o id 107 (da empresa 5) logada como Vértice dá `duplicate key`. Isso revela que o id existe, mas não o conteúdo. Fechar isso exigiria mudar a chave da tabela, o que o README proíbe.
 - **Views sobre `tarefas`** criadas pelo dono ignoram a RLS; precisam de `with (security_invoker = true)` (comentado no schema).
 - **A importação do chamado #412** precisa rodar com um papel administrativo (superusuário ou `BYPASSRLS`), não com o da aplicação.
 
-**Dependências ([PR #6](https://github.com/edylson02-art/Prova-Pr-tica-/pull/6), separado das tarefas):**
-- **O problema:** com o `npm run dev` rodando, o Vite 5.4.10 deixava **qualquer site aberto no navegador ler arquivos de qualquer lugar do disco**. O sufixo `?import&raw??` contornava o bloqueio de pastas, e o CORS era aberto (`*`). Testei lendo `C:\Windows\win.ini`.
-- **A correção:** atualizei o `vite` para 5.4.21 e o `vitest` para 2.1.9, só versões de patch. O mesmo ataque agora dá 403, sem o cabeçalho CORS.
-- **O que continua:** o `npm audit` ainda lista avisos de ambiente de desenvolvimento, porque as correções completas pedem Vite 8 e Vitest 5. O Vitest 5 exige Node 22.12+, e o README promete Node 20, então deixei essa atualização para quando o projeto puder exigir Node 22. Até lá, rodar `npm run dev` só quando for usar a tela e nunca com `--host`.
+**Dependências e servidor de desenvolvimento ([PR #6](https://github.com/edylson02-art/Prova-Pr-tica-/pull/6), já na `main`):**
+- **O problema:**
+  - **Disco exposto.** Com o `npm run dev` rodando, o Vite 5.4.10 deixava **qualquer site aberto no navegador ler arquivos de qualquer lugar do disco**. O sufixo `?import&raw??` contornava o bloqueio de pastas, e o CORS era aberto (`*`). Testei lendo `C:\Windows\win.ini`.
+  - **`npm audit`:** apontava 5 vulnerabilidades, 2 críticas.
+  - **Editor.** O `/__open-in-editor` abria arquivos no editor a pedido de qualquer site.
+- **A correção:**
+  - **Versões:** `vite` 7.3.7, `vitest` 4.1.12 e `@vitejs/plugin-react` 5.2.0.
+  - **Editor:** um filtro em `vite.config.js` só aceita pedidos da própria página (`Sec-Fetch-Site: same-origin`).
+  - **Node:** `engines.node` passou a ser `^20.19.0 || >=22.12.0`, porque o Vite 7 exige isso. Continua dentro do "Node 20 ou mais novo" do README, e o Node 20 está fora de suporte desde 30/04/2026.
+- **A prova:**
+  - `npm audit`: **0 vulnerabilidades**, em todas as branches;
+  - disco, `.git`, `Host` forjado e `/__open-in-editor` de outro site dão 403;
+  - nenhuma resposta manda CORS para outros sites;
+  - o filtro do editor tem 6 testes.
 
 **Decisões de negócio que tomei e merecem confirmação:**
 - **Carnaval e Corpus Christi contam como feriado.** A BrasilAPI os marca como nacionais, mas pela lei são ponto facultativo. Segui a API porque o README pede para não digitar datas à mão.
@@ -151,4 +169,4 @@ Com as seis branches juntas, os **167 testes passam**.
 - **Testes do banco lentos (~45 s):** cada teste de escrita sobe um banco novo. Com mais tempo, usaria transação com rollback por teste.
 - **Identidade autenticada:** conectaria a aplicação direto com um papel sem privilégio e trocaria o `app.empresa_id` por uma identidade autenticada. Isso fecha também o `reset role` em conexões persistentes.
 - **Coluna "Empresa":** com o Grupo Aurora escolhido, a tabela mistura três empresas sem dizer de qual é cada tarefa.
-- **Dependências:** atualizar para Vite 8 e Vitest 5 quando o projeto puder exigir Node 22, para zerar o `npm audit`.
+- **Dependências:** acompanhar o `npm audit`. Hoje está em 0, e o Vite 8 e o Vitest 5 já existem para quando o projeto puder exigir Node 22.
