@@ -1,7 +1,7 @@
 # Status da entrega
 
 **Nome:** Edilson Santos
-**Tempo total gasto (aprox.):** ~1h40 (das 19:44 às 21:20)
+**Tempo total gasto (aprox.):** ~3h06 (das 19:44 às 22:50): ~1h40 nas cinco tarefas e ~1h26 nas auditorias de segurança e correções
 
 Trabalhei com o Claude Code. O histórico da sessão está em [`sessoes/`](sessoes/).
 
