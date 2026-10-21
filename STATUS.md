@@ -97,6 +97,7 @@ Cada tarefa tem uma branch saindo da `main` e um PR aberto. No fim, juntei as ci
   - O arquivo baixado começa com os bytes do BOM (`EF BB BF`).
   - 1 teste confirma que o botão aparece na tela.
   - Com o código da `main`, 22 dos 23 falham.
+  - **Validação manual:** o CSV abriu no Excel com cada campo na sua coluna e os acentos certos, e o botão no navegador baixa o arquivo.
 - **PR:** [#4](https://github.com/edylson02-art/Prova-Pr-tica-/pull/4)
 
 ## Encontrei também
@@ -127,7 +128,7 @@ Cada tarefa tem uma branch saindo da `main` e um PR aberto. No fim, juntei as ci
 
 ## O que ficou faltando / o que eu faria com mais tempo
 
-- **Conferência manual:** não abri o CSV no Excel nem cliquei no botão em um navegador. Os testes cobrem a geração do arquivo e o botão na tela, mas o clique em si não tem teste automatizado, porque o projeto não tem jsdom e não quis adicionar dependência só para isso.
+- **Teste automatizado do clique:** o clique no botão "Exportar CSV" foi validado manualmente, mas não tem teste automatizado, porque o projeto não tem jsdom e não quis adicionar dependência só para isso.
 - **Concorrência na árvore:** o gatilho contra ciclos não foi testado com duas conexões simultâneas, porque o PGlite tem uma conexão só. Faria esse teste num Postgres real.
 - **Testes do banco lentos (~45 s):** cada teste de escrita sobe um banco novo. Com mais tempo, usaria transação com rollback por teste.
 - **Identidade autenticada:** trocaria o `app.empresa_id` por uma identidade autenticada, o que fecha a brecha do `set_config`.
