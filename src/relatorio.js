@@ -15,25 +15,34 @@ function diaDaVenda(v) {
   return diaEmBrasilia.format(quando); // 'YYYY-MM-DD'
 }
 
+// Aceita número ou texto numérico ("250.50", como alguns sistemas exportam).
+// Number() sozinho transformaria null, '' e false em 0 e true em 1 sem aviso.
+// Venda paga com valor negativo não fecha com o financeiro: estorno é outro
+// lançamento, então também é erro.
 function centavos(v) {
-  const valor = Number(v.valor);
-  if (!Number.isFinite(valor)) {
-    throw new Error(`Venda ${v.id}: valor inválido (${v.valor})`);
+  const { valor } = v;
+  const numero = typeof valor === 'number' ? valor
+    : typeof valor === 'string' && valor.trim() !== '' ? Number(valor)
+      : NaN;
+  if (!Number.isFinite(numero) || numero < 0) {
+    throw new Error(`Venda ${v.id}: valor inválido (${JSON.stringify(valor)})`);
   }
-  return Math.round(valor * 100);
+  return Math.round(numero * 100);
 }
 
 // A sincronização pode repetir a mesma venda. Vale a última ocorrência de cada
 // id (o estado mais recente: se veio paga e depois cancelada, está cancelada).
 // Venda sem id não tem como ser identificada, então nunca é descartada.
+// O id é comparado como texto: 1 e "1" são a mesma venda.
 function semRepetidas(vendas) {
   const porId = new Map();
   const semId = [];
   for (const v of vendas) {
     if (v.id == null || v.id === '') semId.push(v);
     else {
-      porId.delete(v.id); // reinsere no fim, na ordem da última ocorrência
-      porId.set(v.id, v);
+      const chave = String(v.id);
+      porId.delete(chave); // reinsere no fim, na ordem da última ocorrência
+      porId.set(chave, v);
     }
   }
   return [...porId.values(), ...semId];

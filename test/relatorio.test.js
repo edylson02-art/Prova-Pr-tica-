@@ -74,6 +74,33 @@ describe('totalDoDia', () => {
     expect(() => totalDoDia([venda('A', 10, 'ontem')], '2026-10-01')).toThrow(/Venda A: data inválida/);
     expect(() => totalDoDia([venda('B', 'dez', '2026-10-01T15:00:00Z')], '2026-10-01')).toThrow(/Venda B: valor inválido/);
   });
+
+  it.each([null, undefined, '', '  ', true, false, [], {}, -500, '-1', '1.234,56', Infinity])(
+    'recusa valor %j em vez de contar como 0 ou 1',
+    (valor) => {
+      expect(() => totalDoDia([venda('A', valor, '2026-10-01T15:00:00Z')], '2026-10-01')).toThrow(/Venda A: valor inválido/);
+    },
+  );
+
+  it('aceita valor zero (cortesia)', () => {
+    expect(totalDoDia([venda('A', 0, '2026-10-01T15:00:00Z'), venda('B', '0', '2026-10-01T15:00:00Z')], '2026-10-01')).toBe(0);
+  });
+
+  it('id 1 e "1" são a mesma venda', () => {
+    const vendas = [venda(1, 100, '2026-10-01T15:00:00Z'), venda('1', 100, '2026-10-01T15:00:00Z')];
+    expect(totalDoDia(vendas, '2026-10-01')).toBe(100);
+  });
+
+  it('venda paga com data inválida em outro dia também impede o relatório', () => {
+    // sem a data não dá para saber se a venda é deste dia: o total ficaria errado
+    const vendas = [venda('A', 100, '2026-10-01T15:00:00Z'), venda('B', 50, 'xx')];
+    expect(() => totalDoDia(vendas, '2026-10-01')).toThrow(/Venda B: data inválida/);
+  });
+
+  it('venda cancelada com dado ruim não atrapalha', () => {
+    const vendas = [venda('A', 100, '2026-10-01T15:00:00Z'), venda('B', null, 'xx', 'cancelada')];
+    expect(totalDoDia(vendas, '2026-10-01')).toBe(100);
+  });
 });
 
 describe('ticketMedio', () => {
