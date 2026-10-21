@@ -19,6 +19,13 @@ Ordem: **3 → 2 → 1 → 5 → 4**.
 
 Cada tarefa tem uma branch saindo da `main` e um PR aberto. No fim, juntei as cinco numa branch temporária (já apagada) para garantir que **se juntam sem conflito e todos os testes passam juntos**.
 
+Depois da entrega, fiz uma **segunda auditoria** atacando o que eu mesmo tinha entregado. Ela achou três problemas, todos corrigidos com testes:
+- **escalada a superusuário** no banco (Tarefa 3, PR #1);
+- **servidor de desenvolvimento expondo o disco** (PR #6, dependências);
+- **validações que deixavam valores passarem calados** no relatório (Tarefa 2, PR #2).
+
+Com as seis branches juntas, os **167 testes passam**.
+
 ## Tarefa 1 — Tela de tarefas
 
 - **Situação:** pronta.
@@ -40,9 +47,10 @@ Cada tarefa tem uma branch saindo da `main` e um PR aberto. No fim, juntei as ci
   - **Ticket médio errado.** Dividia por todas as vendas do dia, incluindo canceladas e repetidas.
 - **Como provei que funciona:**
   - `npm run relatorio -- 2026-10-01` → **R$ 3.400,50**, que bate com o financeiro. O ticket médio ficou em R$ 680,10.
-  - 18 testes, incluindo os 4 dias reais do arquivo (os outros dias também estavam errados) e a virada do dia às 02:59:59Z e 03:00:00Z.
+  - 35 testes da função, incluindo os 4 dias reais do arquivo (os outros dias também estavam errados) e a virada do dia às 02:59:59Z e 03:00:00Z, mais 7 testes que rodam o próprio comando.
   - Mesmo resultado com o computador em UTC, Tóquio e Los Angeles.
-  - Com o código da `main`, 13 dos 18 falham.
+  - Com o código da `main`, 13 dos 18 testes da primeira versão falham.
+  - **Segunda auditoria:** `Number()` transformava `null`, `''` e `false` em 0 e `true` em 1 sem aviso, e aceitava valor negativo em venda paga. Agora esses casos geram erro com o `id` da venda. Além disso, `id` 1 e `"1"` são a mesma venda, e o comando recusa dia que não existe (`2026-13-45`). Contra a versão anterior, 11 testes falham.
 - **PR:** [#2](https://github.com/edylson02-art/Prova-Pr-tica-/pull/2)
 
 ## Tarefa 3 — Cliente vendo dado de outra empresa
@@ -60,6 +68,7 @@ Cada tarefa tem uma branch saindo da `main` e um PR aberto. No fim, juntei as ci
     - sessão sem empresa;
     - alteração da árvore e ciclos.
   - Com o schema da `main`, 29 dos 32 falham. Os 3 que passam são operações permitidas nos dois.
+  - **Segunda auditoria: escalada a superusuário.** O `scripts/db.js` conecta como superusuário e só depois faz `set role app_user`. Com `set_config('role', 'none', ...)`, uma única consulta voltava a superusuário e lia as 15 tarefas, passando por cima de todas as políticas. Corrigi com `revoke execute on function set_config ... from public`, que também impede trocar `app.empresa_id`. São 6 testes novos (4 falham sem a correção) e o total da branch é 38.
 - **PR:** [#1](https://github.com/edylson02-art/Prova-Pr-tica-/pull/1)
 
 ## Tarefa 4 — Prazo em dias úteis
@@ -103,16 +112,19 @@ Cada tarefa tem uma branch saindo da `main` e um PR aberto. No fim, juntei as ci
 ## Encontrei também
 
 **Segurança (não resolvidos, porque exigem mudar arquitetura ou tabelas):**
-- **A empresa logada pode ser trocada por quem executa SQL.** `app.empresa_id` é uma configuração de sessão, e qualquer papel pode alterá-la com `set_config`. Testei: numa única consulta, a Vértice se passa pelo Grupo Aurora. A proteção vale enquanto só o servidor monta o SQL, e uma falha de SQL injection vira acesso ao grupo inteiro. A solução definitiva é tirar a empresa de uma identidade autenticada (claims do JWT ou uma tabela usuário→empresa).
+- **A sessão ainda pode ser desfeita em conexões persistentes.** O `revoke` do `set_config` (PR #1) fecha a escalada dentro de uma consulta. Mas numa conexão que fica aberta entre consultas, um `reset role` enviado como comando separado volta a superusuário. O `npm run db` roda uma consulta por processo, então não é afetado. Em produção, a aplicação deve conectar direto com um papel sem privilégio, e não como superusuário seguido de `set role`. Também deve tirar a empresa de uma identidade autenticada (claims do JWT ou uma tabela usuário→empresa).
+- **Vazamentos menores no banco, que exigem SQL livre:**
+  - `EXPLAIN ANALYZE` mostra quantas linhas de outras empresas foram filtradas;
+  - qualquer pessoa logada pode segurar a trava do gatilho de ciclos (`pg_advisory_lock`) e bloquear mudanças na árvore.
 - **O navegador recebe os dados de todas as empresas.** O `App.jsx` embute o `data/tarefas.json` inteiro, e o seletor deixa escolher qualquer empresa, inclusive a Outra Empresa S.A. Filtrar na tela não protege nada. Com login, a tela deveria buscar as tarefas do servidor, já filtradas pela RLS.
 - **É possível descobrir se um id de tarefa existe em outra empresa.** Inserir o id 107 (da empresa 5) logada como Vértice dá `duplicate key`. Isso revela que o id existe, mas não o conteúdo.
 - **Views sobre `tarefas`** criadas pelo dono ignoram a RLS; precisam de `with (security_invoker = true)` (comentado no schema).
 - **A importação do chamado #412** precisa rodar com um papel administrativo (superusuário ou `BYPASSRLS`), não com o da aplicação.
 
-**Dependências:** `npm audit` aponta 5 vulnerabilidades (2 críticas).
-- O `esbuild` ≤ 0.24.2 deixa qualquer site ler o servidor de desenvolvimento (GHSA-67mh-4wv8-2f99).
-- Também há falhas no `tinypool` e no `@vitest/mocker`.
-- Todas são só do ambiente de desenvolvimento, e a correção exige atualizar versões principais do Vite e do Vitest. Não fiz isso dentro das tarefas para não misturar assuntos. Enquanto isso, não rodar `vite --host`.
+**Dependências ([PR #6](https://github.com/edylson02-art/Prova-Pr-tica-/pull/6), separado das tarefas):**
+- **O problema:** com o `npm run dev` rodando, o Vite 5.4.10 deixava **qualquer site aberto no navegador ler arquivos de qualquer lugar do disco**. O sufixo `?import&raw??` contornava o bloqueio de pastas, e o CORS era aberto (`*`). Testei lendo `C:\Windows\win.ini`.
+- **A correção:** atualizei o `vite` para 5.4.21 e o `vitest` para 2.1.9, só versões de patch. O mesmo ataque agora dá 403, sem o cabeçalho CORS.
+- **O que continua:** o `npm audit` ainda lista avisos de ambiente de desenvolvimento, porque as correções completas pedem Vite 8 e Vitest 5. O Vitest 5 exige Node 22.12+, e o README promete Node 20, então deixei essa atualização para quando o projeto puder exigir Node 22. Até lá, rodar `npm run dev` só quando for usar a tela e nunca com `--host`.
 
 **Decisões de negócio que tomei e merecem confirmação:**
 - **Carnaval e Corpus Christi contam como feriado.** A BrasilAPI os marca como nacionais, mas pela lei são ponto facultativo. Segui a API porque o README pede para não digitar datas à mão.
@@ -123,7 +135,13 @@ Cada tarefa tem uma branch saindo da `main` e um PR aberto. No fim, juntei as ci
 **Outros:**
 - **Sem controle de valores:** a tabela `tarefas` aceita qualquer texto em `status`.
 - **Sem índices:** não há índices em `empresa_id` e `pai_id`.
-- **`scripts/relatorio.js` aceitava qualquer texto como dia:** `01/10/2026` mostrava R$ 0,00 sem aviso. Corrigido no PR #2.
+- **`scripts/relatorio.js` aceitava qualquer texto como dia:** `01/10/2026` e `2026-13-45` mostravam R$ 0,00 sem aviso. Corrigido no PR #2.
+- **Possível incompatibilidade com outros testes:**
+  - a primeira linha do `gerarCSV` começa com o BOM, um caractere invisível;
+  - `prazoSLA` recusa data com hora;
+  - `listarTarefas` espera `empresaId` como número.
+
+  São escolhas deliberadas, documentadas nos PRs.
 - **Testes originais:** os 2 que existiam passavam por coincidência dos dados escolhidos.
 
 ## O que ficou faltando / o que eu faria com mais tempo
@@ -131,6 +149,6 @@ Cada tarefa tem uma branch saindo da `main` e um PR aberto. No fim, juntei as ci
 - **Teste automatizado do clique:** o clique no botão "Exportar CSV" foi validado manualmente, mas não tem teste automatizado, porque o projeto não tem jsdom e não quis adicionar dependência só para isso.
 - **Concorrência na árvore:** o gatilho contra ciclos não foi testado com duas conexões simultâneas, porque o PGlite tem uma conexão só. Faria esse teste num Postgres real.
 - **Testes do banco lentos (~45 s):** cada teste de escrita sobe um banco novo. Com mais tempo, usaria transação com rollback por teste.
-- **Identidade autenticada:** trocaria o `app.empresa_id` por uma identidade autenticada, o que fecha a brecha do `set_config`.
+- **Identidade autenticada:** conectaria a aplicação direto com um papel sem privilégio e trocaria o `app.empresa_id` por uma identidade autenticada. Isso fecha também o `reset role` em conexões persistentes.
 - **Coluna "Empresa":** com o Grupo Aurora escolhido, a tabela mistura três empresas sem dizer de qual é cada tarefa.
-- **Dependências:** um PR separado para atualizar o Vite e o Vitest e zerar o `npm audit`.
+- **Dependências:** atualizar para Vite 8 e Vitest 5 quando o projeto puder exigir Node 22, para zerar o `npm audit`.
