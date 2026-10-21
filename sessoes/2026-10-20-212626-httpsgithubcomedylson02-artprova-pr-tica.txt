@@ -1,0 +1,2458 @@
+
+> https://github.com/edylson02-art/Prova-Pr-tica-  clone esse repositório, e em
+  seguida abre os arquivos aqui no vs code, de preferência clone no disco G
+  desta máquina
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Clonei o repositório em G:\Prova-Pr-tica- e abri a pasta numa nova janela do
+  VS Code.
+
+  Dentro dele estão o README.md, o STATUS.md, o index.html, o package.json, o
+  vite.config.js e as pastas src/, test/, sql/, scripts/, data/ e sessoes/. Pelo
+  package.json e pelo vite.config.js, parece ser um projeto com Vite.
+
+  Ainda não rodei o npm install. Se quiser, eu instalo as dependências e subo o
+  projeto.
+
+> perfeito, próximo passo agora é instalar as dependências node 20 ou mais novo
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Node v24 meets the requirement. Installing with npm ci (uses the lockfile).
+
+  Ran 1 shell command (ctrl+o to expand)
+
+> npm install
+  npm test            # testes que já existem
+  npm run dev         # abre a tela de tarefas no navegador
+  npm run relatorio -- 2026-10-01
+  npm run db -- 3 "select id, empresa_id, titulo from tarefas"
+
+● Installation done. Before running the commands you pasted, I'll take a quick
+  look at the scripts they call.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Everything runs locally (in-memory PGlite, reads JSON). Running the commands:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Now starting the dev server in the background:
+
+  Read 1 file, ran 3 shell commands (ctrl+o to expand)
+
+● As dependências foram instaladas e os comandos que você colou rodaram, todos
+  sem erro. Você tem o Node v24.18.1 e o npm 11.16.0, então o requisito de Node
+  20 ou mais novo está atendido.
+
+  - Instalação: usei npm ci no lugar de npm install. Ele instala exatamente as
+    versões do package-lock.json, então o resultado é o mesmo. Entraram 94
+    pacotes.
+  - npm test: 2 de 2 testes passaram (tarefas.test.js e relatorio.test.js).
+  - npm run relatorio -- 2026-10-01: total vendido de R$ 4.501,00 e ticket médio
+    de R$ 643,00.
+  - npm run db -- 3 "...": voltaram 15 tarefas.
+  - npm run dev: o servidor está no ar em http://localhost:5173/ e abri a página
+    no seu navegador. Ele continua rodando em segundo plano até você pedir para
+    eu parar.
+
+  Algo a revisar: a consulta foi feita como alguém logado na empresa 3, mas
+  retornou tarefas de todas as empresas (2, 3, 4 e 5). Pela lógica do
+  scripts/db.js, essa pessoa deveria ver só as tarefas da empresa 3. Parece que
+  o isolamento por empresa no sql/schema.sql não está funcionando, e talvez seja
+  um dos pontos que a prova quer que você encontre. Não alterei nada.
+
+  Mais dois avisos da instalação:
+  - O npm audit acusou 5 vulnerabilidades (2 moderadas, 1 alta e 2 críticas).
+    Não rodei o npm audit fix --force, porque ele mudaria as versões que o
+    projeto fixou.
+  - O npm bloqueou o script de pós-instalação do esbuild, mas o Vite subiu
+    normalmente, então não fez diferença.
+
+> boa, você está certo acabou de descobrir a regra de negócio, quero uma
+  auditoria completa traga um relatório completo sem alterar nada do código
+  ainda.
+  Somos um grupo de empresas organizado em árvore:
+
+  Grupo Aurora (1)
+  ├── Aurora Serviços (2)
+  │   └── Aurora Campo (4)
+  └── Vértice Finanças (3)
+  Outra Empresa S.A. (5)      ← cliente independente, fora do grupo
+  Regra do negócio: quem escolhe (ou pertence a) uma empresa vê os dados dela e
+  de todas as empresas abaixo dela. Quem escolhe o Grupo Aurora vê tudo do
+  grupo. Quem escolhe a Aurora Serviços vê Aurora Serviços e Aurora Campo.
+  Ninguém do grupo vê a Outra Empresa S.A., e ela não vê ninguém do grupo.
+
+● Vou ler todo o código antes de montar o relatório.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Li o projeto inteiro. Agora vou confirmar cada suspeita rodando testes que não
+  mexem no código: consultas no banco em memória, cálculos isolados e checagem
+  da API de feriados.
+
+  Ran 3 shell commands (ctrl+o to expand)
+
+● Os testes no banco confirmaram o vazamento. O script de verificação das
+  funções falhou porque a pasta temporária ainda não existia. Vou recriar o
+  arquivo e rodar de novo.
+
+  Made 1 scratchpad edit +23, ran 1 shell command (ctrl+o to expand)
+
+● A auditoria terminou e não alterei nenhum arquivo do projeto. Os testes que
+  rodei usam o banco em memória (que some ao fim de cada comando) e um script de
+  verificação que ficou na pasta temporária, fora do repositório.
+
+  Relatório de auditoria — Prova Prática
+
+  Resumo
+
+  ┌─────┬────────────┬─────────────┬──────────────────────────┬────────────┐
+  │  #  │   Tarefa   │  Gravidade  │     Causa principal      │ Confirmado │
+  ├─────┼────────────┼─────────────┼──────────────────────────┼────────────┤
+  │     │ Dados de   │             │ Regra tarefas_importacao │            │
+  │ 3   │ outra      │ 🔴 Crítica  │  com using (true) +      │ ✅         │
+  │     │ empresa    │             │ filtro por igualdade,    │            │
+  │     │            │             │ sem descer a árvore      │            │
+  ├─────┼────────────┼─────────────┼──────────────────────────┼────────────┤
+  │     │            │             │ Dia contado em UTC +     │            │
+  │ 2   │ Relatório  │ 🟠 Alta     │ vendas duplicadas +      │ ✅ R$      │
+  │     │ de vendas  │             │ ticket médio calculado   │ 3.400,50   │
+  │     │            │             │ errado                   │            │
+  ├─────┼────────────┼─────────────┼──────────────────────────┼────────────┤
+  │     │            │             │ Filtro === ignora as     │            │
+  │ 1   │ Tela vazia │ 🟠 Alta     │ empresas filhas + >/<    │ ✅         │
+  │     │            │             │ exclui as pontas         │            │
+  ├─────┼────────────┼─────────────┼──────────────────────────┼────────────┤
+  │     │            │ 🟡 Média,   │ Separador ,, sem aspas,  │            │
+  │ 5   │ CSV no     │ com risco   │ sem BOM, data ISO,       │ ✅         │
+  │     │ Excel      │ de          │ fórmula injetável        │            │
+  │     │            │ segurança   │                          │            │
+  ├─────┼────────────┼─────────────┼──────────────────────────┼────────────┤
+  │     │ Prazo em   │             │ Conta dias corridos e    │            │
+  │ 4   │ dias úteis │ 🟡 Média    │ ignora o parâmetro       │ ✅         │
+  │     │            │             │ feriados                 │            │
+  └─────┴────────────┴─────────────┴──────────────────────────┴────────────┘
+
+  Ordem que recomendo: 3 → 2 → 1 → 5 → 4.
+  - A 3 é vazamento de dados entre clientes, o mais grave.
+  - A 2 dá número financeiro errado.
+  - A 1 deixa a tela principal quebrada.
+  - A 5 é rápida e esconde um risco de segurança.
+  - A 4 é a maior, porque depende de uma API externa, de um comando novo e de
+    uma coluna nova na tela.
+
+  ---
+
+  🔴 Tarefa 3 — Isolamento entre empresas (sql/schema.sql)
+
+  Causas:
+  1. A regra tarefas_importacao (linhas 26–29) é for all using (true) with check
+     (true). No Postgres, regras desse tipo se somam com OU: se uma libera, a
+     linha passa. Então ela libera tudo para todo mundo, e a tarefas_leitura
+     fica inútil. É uma sobra da "importação inicial (chamado #412)".
+  2. Mesmo sem ela, a tarefas_leitura está errada. Ela usa empresa_id =
+     app.empresa_id, ou seja, só a própria empresa. Quem escolhe o Grupo Aurora
+     (1) não veria nada, porque o Grupo não tem tarefa direta.
+  3. Não há regra própria para inserir, alterar ou apagar (with check). Hoje só
+     a regra liberal cobre essas operações.
+
+  O que consegui fazer logado como Vértice Finanças (3):
+
+  ┌────────────────────────────────┬────────────────────────────────────────┐
+  │              Ação              │               Resultado                │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ select                         │ vê as 15 tarefas (empresas 2, 3, 4 e   │
+  │                                │ 5)                                     │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ insert de tarefa na empresa 5  │ ✅ funcionou                           │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ update em tarefas da empresa 5 │ ✅ alterou 107 e 111                   │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ delete em tarefas da empresa 2 │ ✅ apagou 5 tarefas                    │
+  ├────────────────────────────────┼────────────────────────────────────────┤
+  │ update tarefas set             │ ✅ moveu uma tarefa para outro cliente │
+  │ empresa_id=5                   │                                        │
+  └────────────────────────────────┴────────────────────────────────────────┘
+
+  Achados além do pedido (graves):
+  - A tabela empresas não tem controle por linha e aceita alteração. Logado como
+    Outra Empresa (5), rodei update empresas set pai_id=5 where id=1 e
+    funcionou: o Grupo Aurora inteiro passou a ficar "abaixo" da empresa 5.
+    Quando a regra por árvore for corrigida, essa brecha passa a entregar o
+    grupo todo à empresa 5. É preciso tirar a permissão de escrita do app_user
+    em empresas.
+  - A empresa 5 lê os nomes de todas as empresas do grupo (select * from
+    empresas), o que fere "ela não vê ninguém do grupo".
+  - O controle não é forçado para o dono da tabela (relforcerowsecurity =
+    false). Se a aplicação em produção conectar com o usuário dono, o controle é
+    ignorado.
+  - A empresa logada vem de app.empresa_id, uma configuração da sessão que o
+    próprio app_user pode trocar com set_config. Isso só é seguro se o servidor
+    controlar todo o SQL. Vale citar como risco de arquitetura.
+  - Nada impede ciclos na árvore (pai_id apontando para um descendente). A
+    consulta que percorre a árvore precisa se proteger disso.
+
+  Correção proposta (sem aplicar):
+  - Criar uma função que devolve a empresa logada e todas as abaixo dela. Ela
+    percorre a árvore com consulta recursiva usando UNION, que já evita ciclos,
+    e roda com permissão própria (security definer) e search_path fixo.
+  - Ter regras separadas para leitura, inserção, alteração e exclusão, cada uma
+    com using e with check baseados nessa função.
+  - Apagar a tarefas_importacao e forçar o controle por linha.
+  - Ligar o controle por linha em empresas e tirar dela as permissões de
+    inserir, alterar e apagar do app_user.
+  - Se app.empresa_id não estiver definido, não retornar nenhuma linha.
+
+  Tudo isso sem mudar tabelas nem colunas, como o README exige.
+
+  ---
+
+  🟠 Tarefa 2 — Relatório de vendas (src/relatorio.js)
+
+  Três defeitos somados:
+  1. Fuso horário: criada_em.slice(0,10) pega o dia em UTC. Brasília é UTC−3,
+     sem horário de verão desde 2019.
+     - A V-0990 (01/10 02:00Z) é, na verdade, 30/09 às 23:00 e está sendo
+       contada em 01/10.
+     - A V-0995 e a V-0996 (02/10 01:30Z e 02:45Z) são 01/10 à noite e estão
+       ficando de fora.
+  2. Duplicatas: a sincronização repete V-0992, V-0994 e V-0997 com dados
+     idênticos. É preciso remover repetições pelo id, no código, já que o
+     arquivo não pode ser editado.
+  3. Ticket médio: divide pelo total de vendas do dia, incluindo canceladas e
+     duplicadas. Tem que dividir só pelas vendas pagas, sem repetição. Como usa
+     o mesmo filtro de dia, também herda o erro de fuso.
+
+  Comprovação (o atual contra o recalculado com fuso de Brasília e sem
+  duplicatas):
+
+  ┌───────┬─────────────┬───────────────┬──────────────┬────────────────┐
+  │  Dia  │ Total atual │ Total correto │ Ticket atual │ Ticket correto │
+  ├───────┼─────────────┼───────────────┼──────────────┼────────────────┤
+  │ 30/09 │ 770,00      │ 1.370,00      │ 385,00       │ 456,67         │
+  ├───────┼─────────────┼───────────────┼──────────────┼────────────────┤
+  │ 01/10 │ 4.501,00    │ 3.400,50 ✅   │ 643,00       │ 680,10         │
+  ├───────┼─────────────┼───────────────┼──────────────┼────────────────┤
+  │ 02/10 │ 4.850,00    │ 3.340,00      │ 808,33       │ 1.113,33       │
+  ├───────┼─────────────┼───────────────┼──────────────┼────────────────┤
+  │ 03/10 │ 850,00      │ 510,00        │ 425,00       │ 510,00         │
+  └───────┴─────────────┴───────────────┴──────────────┴────────────────┘
+
+  O número correto bate com o do financeiro (R$ 3.400,50). O erro afeta todos os
+  dias, não só o 01/10.
+
+  Outros pontos:
+  - A soma usa número decimal comum (float), sujeito a erro de arredondamento. É
+    melhor somar em centavos.
+  - O scripts/relatorio.js não valida o formato da data recebida.
+  - O único teste existente usa horários que não chegam perto da virada do dia.
+
+  ---
+
+  🟠 Tarefa 1 — Tela vazia (src/tarefas.js)
+
+  Causas:
+  1. t.empresa_id === empresaId, linha 14: só a própria empresa. O Grupo Aurora
+     (1) não tem tarefa direta, então a tela fica vazia, e a Aurora Serviços (2)
+     não mostra as tarefas da Aurora Campo (4). O parâmetro empresas é recebido
+     e nunca usado, e é exatamente o que falta para percorrer a árvore.
+  2. criada_em > de && criada_em < ate, linha 15: exclui as duas pontas do
+     período.
+
+  Comprovação:
+  - Com o período padrão da tela (01/09 a 31/10), o Grupo Aurora (1) retorna
+    zero tarefas.
+  - A Aurora Serviços (2), de 01/09 a 30/09, retorna só a [102]. Faltam a 101
+    (01/09), a 108 (30/09) e as tarefas da Aurora Campo.
+  - A Vértice (3), com período de um dia só (01/10 a 01/10), retorna [], mas
+    deveria trazer a [110].
+  - O teste atual passa por coincidência: a Vértice não tem filhas e nenhuma
+    tarefa dela cai nas pontas.
+
+  Achados extras:
+  - 🔴 Segurança no navegador: o App.jsx embute o tarefas.json inteiro no código
+    entregue ao navegador, e o seletor oferece qualquer empresa, inclusive a
+    Outra Empresa S.A. Filtrar só na tela não protege nada. Isto é uma tela de
+    demonstração, mas deve entrar no STATUS.md.
+  - Se o usuário apagar uma data do filtro, ela vira '' e a lista some.
+  - Tarefas do mesmo dia não têm segundo critério de ordenação (por exemplo, o
+    id).
+
+  ---
+
+  🟡 Tarefa 5 — CSV para o Excel (src/exportar.js)
+
+  Saída atual para as tarefas 110, 112 e 114:
+  id,titulo,status,criada_em
+  110,Fechar folha de setembro,aberta,2026-10-01
+  112,Treinamento "Vendas 2026"; turma 1,aberta,2026-10-03
+  114,=SOMA(despesas) conferir na auditoria,aberta,2026-10-08
+
+  Defeitos:
+  1. O separador é ,, mas o Excel em português espera ;. Por isso fica tudo numa
+     coluna só.
+  2. Falta a marca de codificação no início do arquivo (BOM, \uFEFF), e o Excel
+     lê os acentos errado.
+  3. As datas saem como AAAA-MM-DD, e o pedido é DD/MM/AAAA.
+  4. Não há aspas nos campos. A tarefa 112 tem ; e aspas no título e quebraria
+     as colunas mesmo depois de trocar o separador. É preciso colocar cada campo
+     entre aspas e duplicar as aspas internas. Isso também cobre títulos com
+     quebra de linha.
+  5. 🔴 Injeção de fórmula: a tarefa 114 começa com =SOMA(...), e o Excel
+     executaria isso como fórmula. Campos que começam com = + - @, tabulação ou
+     retorno de linha precisam ser neutralizados, normalmente com um ' na
+     frente.
+  6. Recomendo usar quebra de linha no padrão do Windows (\r\n).
+  7. O botão "Exportar CSV" ainda não existe. Ele deve exportar a lista já
+     filtrada na tela.
+
+  ---
+
+  🟡 Tarefa 4 — Prazo em dias úteis (src/prazo.js)
+
+  Defeitos:
+  - A função soma dias corridos e nunca usa o parâmetro feriados.
+  - Uma tarefa criada na sexta 02/10 com prazo de 1 dia dá 03/10 (sábado). O
+    certo é 05/10.
+  - Uma tarefa criada em 09/10 com prazo de 1 dia dá 10/10 (sábado), mesmo com o
+    feriado de 12/10 informado. O certo é 13/10.
+  - A função mistura leitura da data em UTC com soma no horário local. Testei
+    nos fusos de São Paulo, Tóquio, Los Angeles e Kiritimati e não deu erro. É
+    uma fragilidade, não um defeito comprovado: o certo é fazer tudo em UTC.
+
+  API de feriados: a BrasilAPI (https://brasilapi.com.br/api/feriados/v1/2026)
+  respondeu normalmente, é gratuita, não pede chave e é brasileira. A Nager.Date
+  também responde, mas não é brasileira.
+
+  ⚠️ Ponto para perguntar: a BrasilAPI marca Carnaval (16 e 17/02) e Corpus
+  Christi (04/06) como national. Pela lei, eles são ponto facultativo, não
+  feriado nacional. Já a Consciência Negra (20/11) é feriado nacional desde a
+  Lei 14.759/2023 e está na lista. Vale confirmar pelo WhatsApp se esses dias
+  devem contar como não úteis. O README diz que perguntar bem conta ponto.
+
+  Valores esperados para os testes, com 3 dias úteis de SLA:
+
+  ┌────────┬─────────────┬─────────────────────────────────┐
+  │ Tarefa │  Criada em  │         Prazo esperado          │
+  ├────────┼─────────────┼─────────────────────────────────┤
+  │ 110    │ 01/10 (qui) │ 06/10                           │
+  ├────────┼─────────────┼─────────────────────────────────┤
+  │ 114    │ 08/10 (qui) │ 14/10 (pula o feriado de 12/10) │
+  ├────────┼─────────────┼─────────────────────────────────┤
+  │ 115    │ 10/10 (sáb) │ 15/10                           │
+  └────────┴─────────────┴─────────────────────────────────┘
+
+  Cuidados:
+  - Um prazo que passa da virada do ano precisa dos feriados do ano seguinte.
+  - O que fazer se a API estiver fora do ar.
+  - O que fazer com prazo de 0 dias.
+
+  ---
+
+  Outros achados (para a seção "Encontrei também" do STATUS.md)
+
+  - Dependências: 5 vulnerabilidades no npm audit.
+    - O esbuild (≤0.24.2) deixa qualquer site ler o servidor de desenvolvimento,
+      falha GHSA-67mh-4wv8-2f99.
+    - O tinypool tem uma falha crítica e o @vitest/mocker uma moderada.
+    - Todas afetam só o ambiente de desenvolvimento, e a correção exige
+      atualizar versões principais.
+  - Testes: só existem 2, e os dois passam por coincidência dos dados
+    escolhidos.
+  - Banco:
+    - A coluna status aceita qualquer texto (falta uma restrição de valores).
+    - Faltam índices em empresa_id e pai_id.
+    - Faltam também restrições contra ciclos na árvore de empresas.
+
+  Perguntas que vale mandar pelo WhatsApp
+
+  1. Carnaval e Corpus Christi contam como feriado no prazo?
+  2. Vendas com o mesmo id: são sempre cópias idênticas da sincronização, ou
+     pode haver versões diferentes (por exemplo, paga e depois cancelada)? Se
+     puder, qual vale, a última?
+  3. No CSV, pode colocar ' na frente de títulos que começam com =? Isso protege
+     contra a fórmula, mas muda o texto exibido.
+  4. O seletor da tela deve mostrar só a empresa da pessoa e as abaixo dela?
+
+  O servidor do npm run dev continua rodando em http://localhost:5173. Se
+  quiser, começo pela Tarefa 3 na branch tarefa-3. Também posso publicar este
+  relatório como uma página para compartilhar.
+
+> analise se cada uma dessas soluções apresentadas tem algum risco de
+  vulnerabilidade
+
+● Antes de responder, vou montar num banco à parte a correção que propus para a
+  Tarefa 3 e atacá-la. O banco fica na pasta temporária e o repositório não
+  muda. As outras correções analiso pelo código, e testo onde dá.
+
+  Made 1 scratchpad edit +91, ran 1 shell command (ctrl+o to expand)
+
+● Fiz os ataques e já tenho resultados. Montei num banco à parte a correção que
+  propus para a Tarefa 3 e tentei furá-la de 21 jeitos. As outras quatro
+  analisei pelo código.
+
+  Resumo: a correção da Tarefa 3 cumpre a regra de negócio, mas tem uma brecha
+  grave e três de gravidade média. Nas outras tarefas, as correções simples
+  também abrem riscos novos se forem feitas sem cuidado.
+
+  ---
+
+  🔴 Tarefa 3 — Controle de acesso por empresa no banco
+
+  O que a correção bloqueou (confirmado)
+
+  ┌────────────────────────────────────┬────────────────────────────────────┐
+  │               Ataque               │             Resultado              │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Empresas 1 a 5 lendo tarefas       │ Cada uma vê só a sua árvore ✅ (1  │
+  │                                    │ vê o grupo, 2 vê 2 e 4, 5 vê só 5) │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ 5 lendo empresas                   │ Vê só a si mesma ✅                │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ 3 cria tarefa na empresa 5         │ Barrado ✅                         │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ 3 move uma tarefa sua para a       │ Barrado ✅                         │
+  │ empresa 5                          │                                    │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ 3 altera tarefas da 5 ou apaga     │ Nenhuma linha afetada ✅           │
+  │ tarefas da 2                       │                                    │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ 4 move uma tarefa para a           │ Barrado ✅                         │
+  │ empresa-mãe 2                      │                                    │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ 5 tenta pendurar o Grupo Aurora    │ permission denied ✅               │
+  │ embaixo dela (update empresas)     │                                    │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ TRUNCATE                           │ permission denied ✅               │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Criar função própria para vazar    │ permission denied for schema       │
+  │ dados por mensagem de log          │ public ✅                          │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ Trocar o caminho de busca          │ Sem efeito, porque a função tem    │
+  │ (search_path) para enganar a       │ search_path fixo ✅                │
+  │ função                             │                                    │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ app.empresa_id vazio ou de empresa │ Nenhuma linha (falha fechada) ✅   │
+  │  inexistente                       │                                    │
+  ├────────────────────────────────────┼────────────────────────────────────┤
+  │ app.empresa_id = 'abc'             │ Dá erro (falha fechada) ✅         │
+  └────────────────────────────────────┴────────────────────────────────────┘
+
+  Riscos que sobram
+
+  1. 🔴 Crítico: o usuário pode trocar a própria empresa.
+  -- logado como Vértice (3):
+  select t.id from (select set_config('app.empresa_id','1',false)) s, lateral
+  (select id from tarefas) t
+  -- → 13 tarefas: virou Grupo Aurora
+  O app.empresa_id é uma configuração da sessão, e qualquer usuário pode
+  alterá-la. A correção é segura só enquanto o usuário final não conseguir
+  executar SQL próprio.
+  - Uma única falha de injeção de SQL no servidor vira acesso ao grupo inteiro.
+  - No npm run db isso funciona porque o script aceita SQL livre.
+  - Nenhuma regra de acesso resolve isso sozinha, porque o problema está em onde
+    se guarda quem é a empresa logada.
+  - Correção de verdade: tirar a empresa de uma identidade autenticada. Por
+    exemplo, o JWT validado no Supabase ou uma tabela de usuário→empresa
+    consultada a partir do auth.uid(). O servidor também precisa fixar o valor
+    com set local dentro da transação.
+  - Como a prova manda manter tabelas e colunas, minha recomendação é registrar
+    isso no STATUS.md como risco de arquitetura.
+
+  2. 🟠 Ciclo na árvore dá acesso à empresa-mãe. Forcei um ciclo (1 → 2 → 4 →
+  1), e a Aurora Serviços (2) passou a ver o Grupo inteiro e a Vértice.
+  - O UNION na consulta recursiva evita loop infinito, mas não evita essa
+    escalada.
+  - Depois de tirar a permissão de escrita em empresas, só alguém
+    administrativo, ou dados ruins, criaria o ciclo.
+  - Mitigação: um gatilho (trigger) que recusa um pai_id que forme ciclo. Isso
+    não muda tabela nem coluna.
+
+  3. 🟠 Views criadas pelo dono pulam as regras. Criei uma view simples e a
+  empresa 5 leu as 15 tarefas por ela. No Postgres, a view roda com a permissão
+  de quem a criou.
+  - Mitigação: toda view futura sobre tarefas precisa de with (security_invoker
+    = true).
+  - Vale um comentário no schema.sql.
+
+  4. 🟡 security definer é obrigatório e tem uma pegadinha.
+  - Sem ele, a regra de empresas chama a função, que lê empresas, que chama a
+    função de novo. O resultado foi erro na leitura.
+  - Com ele, a função roda como o dono da tabela. Se esse dono não tiver
+    permissão para ignorar as regras (BYPASSRLS), o force row level security em
+    empresas volta a dar a recursão.
+  - Isso funciona no banco de teste (dono superusuário), mas precisa ser
+    verificado no ambiente real.
+  - A função não pode ter parâmetro. Uma versão empresas_visiveis(id) deixaria
+    qualquer um perguntar pela árvore de outra empresa. Testei a chamada direta,
+    e ela devolve só a árvore da própria empresa (3) ✅.
+
+  5. 🟡 Dá para descobrir se um id existe em outra empresa. A Vértice tentou
+  inserir o id 107, que é da empresa 5, e recebeu duplicate key. Com o 777, que
+  não existe, deu certo.
+  - Isso revela se um id existe, mas não o conteúdo.
+  - Não tem correção sem mudar a tabela (ids sequenciais ou UUID).
+  - Registrar como risco que fica.
+
+  6. 🟡 A importação vai quebrar. Ao apagar a tarefas_importacao, a importação
+  do chamado #412 precisa rodar com um papel administrativo que ignore as
+  regras, nunca com o app_user.
+
+  7. ℹ️ Mover tarefa para uma empresa filha é permitido (2 → 4 funcionou). Pela
+  regra do README, está correto, mas vale confirmar com o negócio.
+
+  ---
+
+  🟠 Tarefa 2 — Relatório de vendas
+
+  Aqui os riscos são de integridade do número financeiro, não de invasão.
+
+  Correção: Fuso fixo de −3h
+  Risco: Se o horário de verão voltar (o assunto voltou a ser debatido
+  recentemente), o relatório erra em silêncio
+  Mitigação: Usar Intl.DateTimeFormat com timeZone: 'America/Sao_Paulo'
+  ────────────────────────────────────────
+  Correção: Remover duplicatas pelo id
+  Risco: Se uma cópia vier paga e outra cancelada, ficar com a primeira conta
+  uma
+  venda cancelada
+  Mitigação: Definir a regra com o negócio (a última vale?) e testar esse caso
+  ────────────────────────────────────────
+  Correção: Remover duplicatas pelo id
+  Risco: Venda sem id vira undefined, e todas as vendas sem id são tratadas como
+
+  uma só, sumindo do total
+  Mitigação: Não descartar vendas sem id e emitir um aviso
+  ────────────────────────────────────────
+  Correção: Somar valor
+  Risco: Se a sincronização mandar "250.50" como texto, a soma vira concatenação
+
+  de texto
+  Mitigação: Number(v.valor) e rejeitar NaN
+  ────────────────────────────────────────
+  Correção: criada_em inválido
+  Risco: new Date dá NaN, e a venda some do relatório sem aviso
+  Mitigação: Contar e avisar quantas vendas foram ignoradas
+  ────────────────────────────────────────
+  Correção: Soma com casas decimais
+  Risco: Erro de arredondamento
+  Mitigação: Somar em centavos inteiros
+
+  ---
+
+  🟠 Tarefa 1 — Tela de tarefas
+
+  Correção: Percorrer a árvore no JavaScript
+  Risco: Com um ciclo nos dados, uma recursão ingênua trava o navegador
+  Mitigação: Guardar as empresas já visitadas (Set)
+  ────────────────────────────────────────
+  Correção: Filtro passa a mostrar empresas filhas
+  Risco: 🔴 Não é controle de acesso. O tarefas.json inteiro continua no código
+  do navegador, e o seletor deixa escolher a Outra Empresa
+  Mitigação: Deixar claro no PR e no STATUS.md. Em produção, os dados vêm do
+  banco já filtrado pelas regras da Tarefa 3, e o seletor mostra só a árvore do
+   usuário
+  ────────────────────────────────────────
+  Correção: Comparar datas como texto
+  Risco: Funciona só no formato AAAA-MM-DD. Data vazia ou em outro formato
+  quebra
+  o filtro
+  Mitigação: Tratar campo vazio como "sem limite"
+
+  ---
+
+  🟡 Tarefa 5 — CSV para o Excel
+
+  Correção: Pôr aspas nos campos
+  Risco: Aspas não impedem a fórmula: "=SOMA(...)" continua sendo executado pelo
+
+  Excel
+  Mitigação: Neutralizar campos que começam com =, +, -, @, tabulação ou \r
+  ────────────────────────────────────────
+  Correção: Prefixar '
+  Risco: O apóstrofo pode aparecer no texto, o que altera o dado
+  Mitigação: Confirmar com o financeiro, como já estava nas perguntas sugeridas
+  ────────────────────────────────────────
+  Correção: Neutralizar só o título
+  Risco: Outros campos de texto (como status) também podem trazer conteúdo
+  malicioso no futuro
+  Mitigação: Aplicar a neutralização a todos os campos
+  ────────────────────────────────────────
+  Correção: Botão exporta "as tarefas"
+  Risco: Usar tarefas em vez de lista exportaria todas as empresas
+  Mitigação: Exportar exatamente a lista mostrada e testar isso
+  ────────────────────────────────────────
+  Correção: Gerar o download
+  Risco: Criar link de download com innerHTML abriria brecha para XSS; links
+  temporários não liberados ocupam memória
+  Mitigação: Usar Blob + URL.createObjectURL + revokeObjectURL, sem innerHTML
+
+  O React já escapa os títulos na tela, então hoje não há XSS. A correção não
+  deve usar dangerouslySetInnerHTML.
+
+  ---
+
+  🟡 Tarefa 4 — Feriados e prazo
+
+  Correção: npm run feriados -- <ano>
+  Risco: 🟠 Caminho malicioso: -- ../../algo vira data/feriados-../../algo.json,
+
+  gravando fora da pasta. O mesmo valor também entra na URL da API
+  Mitigação: Aceitar só ^\d{4}$
+  ────────────────────────────────────────
+  Correção: Resposta da API
+  Risco: Se a API cair ou devolver [], o arquivo sai vazio e todo feriado passa
+  a
+  contar como dia útil sem aviso
+  Mitigação: Validar a estrutura (date no formato AAAA-MM-DD e do ano pedido),
+  exigir uma quantidade mínima e não sobrescrever o arquivo em caso de erro
+  ────────────────────────────────────────
+  Correção: Conteúdo da API
+  Risco: Uma API comprometida poderia injetar ou remover datas
+  Mitigação: Ler só como dados (JSON.parse, nunca eval), revisar a diferença do
+  arquivo antes do commit e filtrar type === 'national'
+  ────────────────────────────────────────
+  Correção: Requisição sem limite de tempo
+  Risco: O comando trava
+  Mitigação: AbortSignal.timeout(10000)
+  ────────────────────────────────────────
+  Correção: Instalar uma biblioteca para a requisição
+  Risco: Mais uma dependência de terceiros
+  Mitigação: Usar o fetch que já vem no Node 20+
+  ────────────────────────────────────────
+  Correção: prazoSLA com laço de repetição
+  Risco: dias igual a Infinity ou muito grande trava a tela
+  Mitigação: Validar inteiro ≥ 0 com limite máximo
+  ────────────────────────────────────────
+  Correção: Prazo que passa da virada do ano
+  Risco: Sem o arquivo de 2027, feriados de janeiro contam como dia útil
+  Mitigação: Avisar quando faltar o arquivo do ano seguinte
+
+  Ponto positivo: como o arquivo de feriados fica salvo no repositório, a tela
+  não chama a API em tempo de execução. Isso elimina problemas de CORS e de
+  instabilidade da API.
+
+  ---
+
+  Dependências (npm audit fix --force)
+
+  - Risco: o comando atualiza versões principais (Vite 5 → 6 ou mais, Vitest 2 →
+    3 ou mais) e pode quebrar o projeto ou os testes.
+  - As falhas atuais afetam só o ambiente de desenvolvimento. A do esbuild só é
+    explorável se você estiver com o servidor de desenvolvimento rodando e
+    visitar um site malicioso.
+  - Recomendação: não fazer isso dentro das tarefas. Registrar no STATUS.md e,
+    enquanto isso, nunca rodar vite --host.
+
+  ---
+
+  O que muda na correção proposta da Tarefa 3
+
+  1. Somar à proposta o gatilho contra ciclos em empresas.
+  2. Comentar no schema.sql que toda view sobre tarefas precisa de
+     security_invoker = true.
+  3. Confirmar que o dono da função pode ignorar as regras de acesso
+     (BYPASSRLS).
+  4. Registrar no STATUS.md:
+     - a troca de empresa via set_config, como limitação da arquitetura;
+     - a descoberta de ids pela chave primária, como risco que fica.
+
+  Os scripts de ataque ficaram em C:\Users\user\AppData\Local\Temp\claude\g--Pro
+  jetos-ES-Nexus-Nexus-G-s-independencia-gas-base-v1\97d0290f-9dac-40e2-986d-3e3
+  b142f48c9\scratchpad\ataque-rls.mjs. Dá para reaproveitá-los como teste
+  automatizado no PR da tarefa-3, o que serve de prova de que a correção
+  funciona. Quer que eu comece por ela?
+
+> Boa noite, você tem total liberdade nessa decisão, depois vamos avaliar faz
+  parte da avaliação resposta que obtive das perguntas, por enquanto não altere
+  nada
+
+● Boa noite! Entendi: a resposta da avaliação é que eu mesmo decido, e isso
+  conta ponto. Seguem as decisões, cada uma com o motivo, para registrar no
+  STATUS.md e nos PRs. Não alterei nenhum arquivo.
+
+  Decisões
+
+  1. Feriados: sigo a BrasilAPI como ela vem, com Carnaval e Corpus Christi
+  contando como feriado.
+  - O README manda usar a API e proíbe digitar datas à mão. Tirar Carnaval e
+    Corpus Christi pelo nome seria justamente uma lista manual.
+  - A fonte fica única e a regra fica fácil de auditar.
+  - A diferença em relação à lei (são ponto facultativo) vai documentada no
+    STATUS.md. Se o cliente discordar, a mudança é de uma linha.
+
+  2. Vendas duplicadas: vale a última ocorrência de cada id.
+  - Numa sincronização, o registro mais recente costuma ser o estado atual da
+    venda, então se uma cópia vier paga e outra cancelada, prevalece a última.
+  - Nos dados atuais as cópias são idênticas, então o total continua R$
+    3.400,50.
+  - Vendas sem id não são juntadas: entram todas.
+  - Vai ter teste para esses dois casos.
+
+  3. CSV: prefixo ' em qualquer campo que comece com =, +, -, @, tabulação ou
+  \r.
+  - É a recomendação do OWASP contra injeção de fórmula.
+  - Prefiro uma pequena mudança visual a um risco de execução no Excel do
+    financeiro.
+  - A regra vale para todos os campos, não só para o título.
+
+  4. O seletor da tela continua com todas as empresas.
+  - A Tarefa 1 pede explicitamente "quando escolho o Grupo Aurora na tela". A
+    tela não tem login, então limitar o seletor ficaria fora do que foi pedido.
+  - O fato de o navegador receber os dados de todas as empresas vai documentado
+    como risco.
+
+  5. Tarefa 3: incluo a proteção contra ciclos e a orientação sobre views; a
+  troca de empresa via set_config fica documentada.
+
+  Achei mais um problema ao planejar a Tarefa 3. O scripts/db.js roda o
+  schema.sql antes de criar o app_user e, depois, dá permissão de escrita em
+  todas as tabelas. Então o revoke que propus, se ficasse no schema.sql, seria
+  desfeito na sequência.
+
+  A saída é negar a escrita em empresas pelas próprias regras de acesso, sem
+  mexer no db.js. Basta ligar e forçar o controle por linha nessa tabela, com
+  uma regra só de leitura: quando nenhuma regra libera inserir, alterar ou
+  apagar, o Postgres nega por padrão. Vou testar isso antes de abrir o PR.
+
+  6. Ordem de trabalho: 3 → 2 → 1 → 5 → 4, cada uma na sua branch saindo da
+  main. Os scripts de ataque viram testes automatizados.
+
+  Vou guardar este contexto na memória para não se perder entre sessões.
+
+  Ran 1 shell command, wrote 1 memory (ctrl+o to expand)
+
+● Guardei as decisões na memória do Claude Code, junto com a ordem de trabalho e
+  a observação sobre o scripts/db.js. Assim elas continuam valendo numa próxima
+  sessão. No repositório, nenhum arquivo foi alterado.
+
+  O servidor do npm run dev continua rodando em http://localhost:5173. Quando
+  você liberar, começo pela Tarefa 3.
+
+> antes de mais nada, corrije a vulnerabilidade da arvore
+
+● Por "vulnerabilidade da árvore" entendi as duas brechas na tabela empresas que
+  confirmei antes:
+  - uma pessoa logada consegue mudar o pai_id e pendurar o grupo inteiro embaixo
+    da empresa dela;
+  - um ciclo na árvore deixa uma empresa enxergar as que estão acima dela.
+
+  Como isso faz parte da Tarefa 3, vou trabalhar na branch tarefa-3, saindo da
+  main.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Update(G:\Prova-Pr-tica-\sql\schema.sql)
+  ⎿  Added 42 lines
+      16    criada_em  date not null
+      17  );
+      18  
+      19 +-- A árvore de empresas é o que decide quem vê o quê, então que
+         +m está logado                                                  
+      20 +-- não pode mexer nela: sem política de insert/update/delete, o
+         + Postgres nega                                                 
+      21 +-- a escrita mesmo com o grant da aplicação. A carga de empresa
+         +s é feita por                                                  
+      22 +-- um papel administrativo (superusuário ou BYPASSRLS).        
+      23 +alter table empresas enable row level security;                
+      24 +alter table empresas force row level security;                 
+      25 +                                                               
+      26 +create policy empresas_leitura on empresas                     
+      27 +  for select                                                   
+      28 +  using (true);                                                
+      29 +                                                               
+      30 +-- A árvore não pode ter ciclo: com 1 → 2 → 4 → 1, a empresa 2 
+         +passaria a                                                     
+      31 +-- "estar acima" do Grupo Aurora e enxergaria o grupo inteiro. 
+      32 +-- Vale também para o administrador. security definer para enxe
+         +rgar a árvore                                                  
+      33 +-- toda, independente das políticas de quem está gravando.     
+      34 +create function empresas_impede_ciclo() returns trigger        
+      35 +language plpgsql security definer set search_path = pg_catalog,
+         + public as $$                                                  
+      36 +declare                                                        
+      37 +  atual     int := new.pai_id;                                 
+      38 +  visitados int[] := array[new.id];                            
+      39 +begin                                                          
+      40 +  -- serializa as mudanças na árvore: duas trocas simultâneas (
+         +A sob B e                                                      
+      41 +  -- B sob A) não podem passar cada uma sem ver a outra        
+      42 +  perform pg_advisory_xact_lock(hashtext('empresas_arvore'));  
+      43 +                                                               
+      44 +  while atual is not null loop                                 
+      45 +    if atual = new.id then                                     
+      46 +      raise exception 'a empresa % não pode ficar abaixo de si 
+         +mesma', new.id;                                                
+      47 +    end if;                                                    
+      48 +    if atual = any(visitados) then                             
+      49 +      raise exception 'a árvore de empresas já tem um ciclo em 
+         +%', atual;                                                     
+      50 +    end if;                                                    
+      51 +    visitados := visitados || atual;                           
+      52 +    select pai_id into atual from public.empresas where id = at
+         +ual;                                                           
+      53 +  end loop;                                                    
+      54 +  return new;                                                  
+      55 +end $$;                                                        
+      56 +                                                               
+      57 +create trigger empresas_sem_ciclo                              
+      58 +  before insert or update of id, pai_id on empresas            
+      59 +  for each row execute function empresas_impede_ciclo();       
+      60 +                                                               
+      61  alter table tarefas enable row level security;
+      62  
+      63  create policy tarefas_leitura on tarefas
+
+● Write(G:\Prova-Pr-tica-\test\banco.js)
+  ⎿  Wrote 42 lines to ..\..\..\Prova-Pr-tica-\test\banco.js
+      1 // Banco em memória preparado do mesmo jeito que scripts/db.js, p
+        ara os testes.
+      2 import { readFileSync } from 'node:fs';
+      3 import { PGlite } from '@electric-sql/pglite';
+      4
+        l), 'utf8');
+      6
+      7 export async function criarBanco() {
+      8   const db = new PGlite();
+      9   await db.exec(ler('sql/schema.sql'));
+     … +39 lines (ctrl+o to expand)
+● Write(G:\Prova-Pr-tica-\test\arvore.test.js)
+  ⎿  Wrote 59 lines to ..\..\..\Prova-Pr-tica-\test\arvore.test.js
+       1 import { describe, it, expect, beforeEach } from 'vitest';
+       2 import { criarBanco } from './banco.js';
+       3
+       4 const paiDe = async (banco, id) =>
+       5   (await banco.admin('select pai_id from empresas where id = $1'
+       6
+       7 describe('árvore de empresas', () => {
+       8   let banco;
+       9   beforeEach(async () => {
+      10     banco = await criarBanco();
+     … +57 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Os 9 testes passaram (7 novos + 2 existentes). Agora vou rodá-los contra o
+  schema.sql original para confirmar que falham, e repetir o ataque via npm run
+  db.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Corrigi as duas falhas da árvore de empresas, na branch tarefa-3. Ainda não
+  fiz commit nem push.
+
+  O que mudou em sql/schema.sql (../../../../Prova-Pr-tica-/sql/schema.sql):
+
+  1. Ninguém logado consegue mais escrever em empresas. Liguei e forcei o
+     controle por linha nessa tabela, com uma regra só de leitura. Sem regra de
+     inserir, alterar ou apagar, o Postgres nega a escrita, mesmo com a
+     permissão que o scripts/db.js dá ao usuário da aplicação. Por isso não
+     precisei mexer no db.js. O cadastro inicial continua funcionando porque
+     roda como administrador.
+  2. A árvore não aceita mais ciclos, nem pelo administrador. Um gatilho sobe a
+     árvore a partir do novo pai_id e recusa a gravação se chegar na própria
+     empresa. Ele também se protege de um ciclo que já exista nos dados.
+     - O gatilho roda com permissão própria (security definer) para enxergar a
+       árvore inteira.
+     - Ele usa uma trava (pg_advisory_xact_lock) para que duas mudanças ao mesmo
+       tempo (A embaixo de B e B embaixo de A) não passem sem uma ver a outra.
+
+  Como testei:
+  - Criei 7 testes em test/arvore.test.js
+    (../../../../Prova-Pr-tica-/test/arvore.test.js). Eles usam o helper
+    test/banco.js (../../../../Prova-Pr-tica-/test/banco.js), que prepara o
+    banco igual ao scripts/db.js.
+  - Com a correção: a suíte inteira passa, 9 de 9 testes.
+  - Com o schema.sql original: 6 dos 7 testes novos falham. O único que passa é
+    o que confirma que o administrador ainda reorganiza a árvore normalmente, e
+    ele deve passar nos dois casos.
+  - No ataque pelo npm run db: update empresas set pai_id=5 where id=1, feito
+    pela Outra Empresa (5), agora não altera nada. Antes, pendurava o Grupo
+    Aurora embaixo dela.
+
+  O que ainda falta na Tarefa 3:
+  - A Vértice (3) continua vendo as 15 tarefas.
+  - A leitura de empresas continua liberada para todos, de propósito por
+    enquanto (using (true)). Ela será restringida à árvore da pessoa no próximo
+    passo, junto com as regras das tarefas.
+  - O gatilho contra ciclos não foi testado com dois acessos simultâneos, porque
+    o banco em memória (PGlite) tem uma conexão só. Isso vai documentado no PR.
+  - Os testes novos levam cerca de 27 segundos, porque cada um sobe um banco do
+    zero.
+
+  Quer que eu faça o commit desta parte na tarefa-3 e siga para as regras de
+  leitura e escrita das tarefas?
+
+> sim, por favor
+
+● Fazendo o commit da primeira parte:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Este repositório não tem identidade do Git configurada. Vou ver qual
+  identidade o seu outro repositório usa para aplicar a mesma, só neste
+  repositório.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● Commit feito. Agora as regras de leitura e escrita das tarefas:
+
+● Update(G:\Prova-Pr-tica-\sql\schema.sql)
+  ⎿  Added 17 lines, removed 1 line
+      23  alter table empresas enable row level security;
+      24  alter table empresas force row level security;
+      25  
+      26 +-- Empresas que a pessoa logada enxerga: a dela e todas abaixo 
+         +dela.                                                          
+      27 +-- Sem app.empresa_id, nenhuma. security definer porque lê empr
+         +esas, que tem                                                  
+      28 +-- RLS que chama esta função (sem isso, recursão). Não recebe p
+         +arâmetro de                                                    
+      29 +-- propósito: ninguém pode perguntar pela árvore de outra empre
+         +sa.                                                            
+      30 +create function empresas_visiveis() returns setof int          
+      31 +language sql stable security definer set search_path = pg_catal
+         +og, public as $$                                               
+      32 +  with recursive arvore(id) as (                               
+      33 +    select id from public.empresas                             
+      34 +     where id = nullif(current_setting('app.empresa_id', true),
+         + '')::int                                                      
+      35 +    union                                                      
+      36 +    select e.id from public.empresas e join arvore a on e.pai_i
+         +d = a.id                                                       
+      37 +  )                                                            
+      38 +  select id from arvore                                        
+      39 +$$;                                                            
+      40 +revoke all on function empresas_visiveis() from public;        
+      41 +                                                               
+      42  create policy empresas_leitura on empresas
+      43    for select
+      28 -  using (true);                                                
+      44 +  using (id in (select empresas_visiveis()));                  
+      45  
+      46  -- A árvore não pode ter ciclo: com 1 → 2 → 4 → 1, a empresa 2 
+          passaria a
+      47  -- "estar acima" do Grupo Aurora e enxergaria o grupo inteiro.
+
+● Update(G:\Prova-Pr-tica-\sql\schema.sql)
+  ⎿  Added 20 lines, removed 6 lines
+       74    before insert or update of id, pai_id on empresas
+       75    for each row execute function empresas_impede_ciclo();
+       76  
+       77 +-- Tarefas: ver, criar, alterar e apagar só nas empresas visív
+          +eis. O with check                                             
+       78 +-- impede criar tarefa para outra empresa ou mover uma tarefa 
+          +para fora da árvore.                                          
+       79 +-- A importação (chamado #412) roda com papel administrativo, 
+          +não com o da                                                  
+       80 +-- aplicação: uma política "using (true)" liberava tudo para t
+          +odo mundo.                                                    
+       81 +-- Views sobre tarefas precisam de "with (security_invoker = t
+          +rue)"; sem isso                                               
+       82 +-- rodam como o dono e ignoram estas políticas.               
+       83  alter table tarefas enable row level security;
+       84 +alter table tarefas force row level security;                 
+       85  
+       86  create policy tarefas_leitura on tarefas
+       87    for select
+       81 -  using (empresa_id = current_setting('app.empresa_id', true):
+          -:int);                                                        
+       88 +  using (empresa_id in (select empresas_visiveis()));         
+       89  
+       83 --- liberado para a importação inicial (chamado #412)          
+       84 -create policy tarefas_importacao on tarefas                   
+       85 -  for all                                                     
+       86 -  using (true)                                                
+       87 -  with check (true);                                          
+       90 +create policy tarefas_criacao on tarefas                      
+       91 +  for insert                                                  
+       92 +  with check (empresa_id in (select empresas_visiveis()));    
+       93 +                                                              
+       94 +create policy tarefas_alteracao on tarefas                    
+       95 +  for update                                                  
+       96 +  using (empresa_id in (select empresas_visiveis()))          
+       97 +  with check (empresa_id in (select empresas_visiveis()));    
+       98 +                                                              
+       99 +create policy tarefas_exclusao on tarefas                     
+      100 +  for delete                                                  
+      101 +  using (empresa_id in (select empresas_visiveis()));         
+
+● Update(G:\Prova-Pr-tica-\test\banco.js)
+  ⎿  Added 4 lines, removed 2 lines
+      26      /** Consulta como administrador (dono do banco). */
+      27      admin: (sql, params) => db.query(sql, params),
+      28  
+      29 -    /** Consulta como uma pessoa logada na empresa, igual ao sc
+         -ripts/db.js. */                                                
+      29 +    /** Consulta como uma pessoa logada na empresa, igual ao sc
+         +ripts/db.js.                                                   
+      30 +     *  empresaId null = sessão sem empresa definida. */       
+      31      async como(empresaId, sql, params) {
+      32 +      const valor = empresaId === null ? '' : Number(empresaId)
+         +;                                                              
+      33        await db.exec(`
+      32 -        select set_config('app.empresa_id', '${Number(empresaId
+         -)}', false);                                                   
+      34 +        select set_config('app.empresa_id', '${valor}', false);
+      35          set role app_user;
+      36        `);
+      37        try {
+
+● Write(G:\Prova-Pr-tica-\test\acesso.test.js)
+  ⎿  Wrote 122 lines to ..\..\..\Prova-Pr-tica-\test\acesso.test.js
+       1 import { describe, it, expect, beforeAll, beforeEach } from 'vit
+         est';
+       2 import { criarBanco } from './banco.js';
+       3
+       4 // Grupo Aurora (1) ── Aurora Serviços (2) ── Aurora Campo (4)
+       6 // Outra Empresa S.A. (5), fora do grupo
+       7 const TAREFAS = {
+       8   2: [101, 102, 108, 112, 115],
+       9   3: [105, 106, 110, 114],
+      10   4: [103, 104, 109, 113],
+     … +140 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Os 34 testes passaram. Vou rodar os testes novos contra o schema da main para
+  provar que eles pegam o problema, e conferir o caso do chamado pelo npm run
+  db.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● O "ERRO: perdeu alteracao" foi falso alarme — meu script checou justo no
+  momento em que o arquivo estava temporariamente igual ao da main, antes da
+  restauração. O git diff --stat confirma que as 44 linhas da correção estão no
+  lugar; vou seguir com o commit.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● A correção da Tarefa 3 está pronta e tem dois commits na branch tarefa-3. Não
+  fiz push nem abri o PR.
+
+  O que mudou em sql/schema.sql (../../../../Prova-Pr-tica-/sql/schema.sql):
+  - Função empresas_visiveis(): devolve a empresa logada e todas as que estão
+    abaixo dela na árvore.
+    - Sem empresa definida na sessão, devolve nenhuma.
+    - Não recebe parâmetro, então ninguém consegue pedir a árvore de outra
+      empresa.
+    - Roda com permissão própria (security definer). Sem isso, a regra de
+      empresas chamaria a função e a função leria empresas de novo, sem parar.
+  - Tarefas: apaguei a regra tarefas_importacao, que liberava tudo para todos.
+    No lugar ficaram quatro regras separadas, de leitura, criação, alteração e
+    exclusão, todas limitadas às empresas visíveis. As de criação e alteração
+    também barram criar tarefa para outra empresa ou mover uma tarefa para fora
+    da árvore.
+  - empresas: cada pessoa passa a ver só as empresas da própria árvore. A Outra
+    Empresa não enxerga mais o grupo.
+  - Controle forçado nas duas tabelas, para valer também se a aplicação conectar
+    como dono da tabela.
+  - Comentário no arquivo: a importação do chamado #412 precisa rodar com um
+    papel administrativo, e toda view sobre tarefas precisa de security_invoker
+    = true.
+
+  Como provei:
+  - O caso do chamado foi resolvido: logada como Vértice (3), a consulta do
+    README agora traz só 105, 106, 110 e 114. O Grupo Aurora (1) vê as tarefas
+    das empresas 2, 3 e 4, sem a 5.
+  - Criei 25 testes em test/acesso.test.js
+    (../../../../Prova-Pr-tica-/test/acesso.test.js), cobrindo leitura e escrita
+    para cada empresa. Somando com os 7 da árvore e os 2 que já existiam, os 34
+    passam.
+  - Rodei os mesmos 25 testes contra o schema da main: 23 falham. Os 2 que
+    passam são casos permitidos nos dois schemas (criar e mover tarefa dentro da
+    própria árvore), então passar é o esperado.
+
+  Riscos que continuam (vão para o PR e para o STATUS.md):
+  - Quem consegue executar SQL próprio ainda pode trocar a própria empresa com
+    set_config('app.empresa_id', ...). Isso só se resolve tirando a empresa de
+    uma identidade autenticada, o que muda a arquitetura.
+  - Dá para descobrir se um id existe em outra empresa pelo erro de chave
+    duplicada.
+  - A trava contra mudanças simultâneas na árvore não foi testada com duas
+    conexões, porque o PGlite tem uma só.
+  - A suíte de testes agora leva cerca de 45 segundos, porque cada teste de
+    escrita sobe um banco novo.
+
+  Outra mudança fora do código: este repositório não tinha identidade do Git.
+  Configurei só nele o mesmo nome e e-mail que o seu outro repositório usa
+  (edylson02-art com o e-mail noreply do GitHub).
+
+  O próximo passo pela ordem combinada é a Tarefa 2 (relatório de vendas). Antes
+  disso, quer que eu faça o push da tarefa-3 e abra o PR com essa descrição?
+
+> Perfeito, faça push da tarefa-3 e abra o pr como solicitado no readmi
+  apresente a causa do problema e a solução por favor
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● O repositório é seu, público, e a main é a branch padrão. Vou fazer o push e
+  escrever a descrição do PR.
+
+  Made 1 scratchpad edit +79, ran 1 shell command, wrote 1 memory (ctrl+o to expand)
+
+● Escrito para: os avaliadores da prova, que vão ler o PR no GitHub.
+
+  Fiz o push da branch tarefa-3 e abri o PR:
+  https://github.com/edylson02-art/Prova-Pr-tica-/pull/1. Ele aponta para a main
+  e ficou aberto, sem merge, como o README pede.
+
+  A descrição segue o que o README pede:
+  - O problema: o chamado reproduzido com o comando do README. Antes, a Vértice
+    via as 15 tarefas e conseguia criar, alterar e apagar tarefas de outras
+    empresas.
+  - A causa: três falhas somadas no schema.sql.
+    - A regra tarefas_importacao, com using (true), liberava tudo, porque no
+      Postgres basta uma regra aprovar a linha.
+    - A regra de leitura comparava só com a própria empresa, sem descer a
+      árvore.
+    - A tabela empresas podia ser alterada por quem estava logado e aceitava
+      ciclos.
+  - A solução: a função empresas_visiveis(), uma regra para cada operação (ler,
+    criar, alterar, apagar), a tabela empresas só para leitura, o gatilho contra
+    ciclos e o controle forçado nas duas tabelas. Também explica por que
+    bloqueei a escrita com regras de acesso em vez de revoke.
+  - Como provei: a consulta do chamado antes e depois; os 34 testes passando; e
+    os mesmos testes rodados no schema da main, onde 23 de 25 e 6 de 7 falham.
+  - Riscos que continuam, em detalhe:
+    - quem executa SQL próprio ainda consegue trocar a própria empresa com
+      set_config;
+    - o erro de chave duplicada revela se um id existe em outra empresa;
+    - views criadas pelo dono ignoram as regras;
+    - a importação do chamado #412 passa a precisar de um papel administrativo;
+    - a trava contra mudanças simultâneas não foi testada com duas conexões;
+    - a suíte ficou mais lenta, cerca de 45 segundos.
+
+  Também anotei na memória que a Tarefa 3 está fechada. A próxima, pela ordem
+  combinada, é a Tarefa 2 (relatório de vendas), numa branch nova saindo da
+  main. Posso começar?
+
+> sim, por favor
+
+● Criando a branch tarefa-2 a partir da main:
+
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+
+● Write(G:\Prova-Pr-tica-\src\relatorio.js)
+  ⎿  Added 53 lines, removed 8 lines
+       1 +// Os dias do relatório são no horário de Brasília. Usa o fuso 
+         +pelo nome (e não                                               
+       2 +// um -3h fixo) para continuar certo se o horário de verão volt
+         +ar.                                                            
+       3 +const diaEmBrasilia = new Intl.DateTimeFormat('en-CA', {       
+       4 +  timeZone: 'America/Sao_Paulo',                               
+       5 +  year: 'numeric',                                             
+       6 +  month: '2-digit',                                            
+       7 +  day: '2-digit',                                              
+       8 +});                                                            
+       9 +                                                               
+      10 +function diaDaVenda(v) {                                       
+      11 +  const quando = new Date(v.criada_em);                        
+      12 +  if (Number.isNaN(quando.getTime())) {                        
+      13 +    throw new Error(`Venda ${v.id}: data inválida (${v.criada_e
+         +m})`);                                                         
+      14 +  }                                                            
+      15 +  return diaEmBrasilia.format(quando); // 'YYYY-MM-DD'         
+      16 +}                                                              
+      17 +                                                               
+      18 +function centavos(v) {                                         
+      19 +  const valor = Number(v.valor);                               
+      20 +  if (!Number.isFinite(valor)) {                               
+      21 +    throw new Error(`Venda ${v.id}: valor inválido (${v.valor})
+         +`);                                                            
+      22 +  }                                                            
+      23 +  return Math.round(valor * 100);                              
+      24 +}                                                              
+      25 +                                                               
+      26 +// A sincronização pode repetir a mesma venda. Vale a última oc
+         +orrência de cada                                               
+      27 +// id (o estado mais recente: se veio paga e depois cancelada, 
+         +está cancelada).                                               
+      28 +// Venda sem id não tem como ser identificada, então nunca é de
+         +scartada.                                                      
+      29 +function semRepetidas(vendas) {                                
+      30 +  const porId = new Map();                                     
+      31 +  const semId = [];                                            
+      32 +  for (const v of vendas) {                                    
+      33 +    if (v.id == null || v.id === '') semId.push(v);            
+      34 +    else {                                                     
+      35 +      porId.delete(v.id); // reinsere no fim, na ordem da últim
+         +a ocorrência                                                   
+      36 +      porId.set(v.id, v);                                      
+      37 +    }                                                          
+      38 +  }                                                            
+      39 +  return [...porId.values(), ...semId];                        
+      40 +}                                                              
+      41 +                                                               
+      42 +function pagasDoDia(vendas, dia) {                             
+      43 +  return semRepetidas(vendas)                                  
+      44 +    .filter((v) => v.status === 'paga')                        
+      45 +    .filter((v) => diaDaVenda(v) === dia);                     
+      46 +}                                                              
+      47 +                                                               
+      48  /** Total vendido (só vendas pagas) em um dia 'YYYY-MM-DD'. */
+      49  export function totalDoDia(vendas, dia) {
+       3 -  return vendas                                                
+       4 -    .filter((v) => v.status === 'paga')                        
+       5 -    .filter((v) => v.criada_em.slice(0, 10) === dia)           
+       6 -    .reduce((soma, v) => soma + v.valor, 0);                   
+      50 +  // soma em centavos para não acumular erro de ponto flutuante
+      51 +  return pagasDoDia(vendas, dia).reduce((soma, v) => soma + cen
+         +tavos(v), 0) / 100;                                            
+      52  }
+      53  
+       9 -/** Ticket médio do dia: total vendido ÷ número de vendas. */  
+      54 +/** Ticket médio do dia: total vendido ÷ número de vendas pagas
+         +. */                                                           
+      55  export function ticketMedio(vendas, dia) {
+      11 -  const doDia = vendas.filter((v) => v.criada_em.slice(0, 10) =
+         -== dia);                                                       
+      12 -  if (doDia.length === 0) return 0;                            
+      13 -  return totalDoDia(vendas, dia) / doDia.length;               
+      56 +  const pagas = pagasDoDia(vendas, dia);                       
+      57 +  if (pagas.length === 0) return 0;                            
+      58 +  return totalDoDia(vendas, dia) / pagas.length;               
+      59  }
+      60  
+      61  export function formatarBRL(valor) {
+
+● Update(G:\Prova-Pr-tica-\scripts\relatorio.js)
+  ⎿  Added 1 line, removed 1 line
+      3  import { totalDoDia, ticketMedio, formatarBRL } from '../src/rel
+         atorio.js';
+      4  
+      5  const dia = process.argv[2];
+      6 -if (!dia) {                                                     
+      6 +if (!/^\d{4}-\d{2}-\d{2}$/.test(dia ?? '')) {                   
+      7    console.error('Informe o dia: npm run relatorio -- 2026-10-01'
+         );
+      8    process.exit(1);
+      9  }
+
+● Write(G:\Prova-Pr-tica-\test\relatorio.test.js)
+  ⎿  Added 91 lines, removed 1 line
+      1  import { describe, it, expect } from 'vitest';
+      2 -import { totalDoDia } from '../src/relatorio.js';               
+      2 +import vendasReais from '../data/vendas.json';                  
+      3 +import { totalDoDia, ticketMedio, formatarBRL } from '../src/rel
+        +atorio.js';                                                     
+      4  
+      5 +const venda = (id, valor, criada_em, status = 'paga') => ({ id, 
+        +valor, status, criada_em });                                    
+      6 +                                                                
+      7  describe('totalDoDia', () => {
+      8    it('soma só as vendas pagas', () => {
+      9      const vendas = [
+     ...
+       12      ];
+       13      expect(totalDoDia(vendas, '2026-10-05')).toBe(100);
+       14    });
+       15 +                                                              
+       16 +  it('bate com a conferência do financeiro para 01/10/2026', (
+          +) => {                                                        
+       17 +    expect(totalDoDia(vendasReais, '2026-10-01')).toBe(3400.5)
+          +;                                                             
+       18 +    expect(formatarBRL(totalDoDia(vendasReais, '2026-10-01')))
+          +.toBe('R$ 3.400,50');                                         
+       19 +  });                                                         
+       20 +                                                              
+       21 +  it.each([                                                   
+       22 +    ['2026-09-30', 1370],                                     
+       23 +    ['2026-10-02', 3340],                                     
+       24 +    ['2026-10-03', 510],                                      
+       25 +    ['2026-10-04', 0],                                        
+       26 +  ])('fecha os outros dias do arquivo (%s → %d)', (dia, total)
+          + => {                                                         
+       27 +    expect(totalDoDia(vendasReais, dia)).toBe(total);         
+       28 +  });                                                         
+       29 +                                                              
+       30 +  it('usa o dia de Brasília: 02:59Z ainda é o dia anterior, 03
+          +:00Z já é o dia', () => {                                     
+       31 +    const vendas = [                                          
+       32 +      venda('A', 10, '2026-10-02T02:59:59Z'), // 01/10 23:59:5
+          +9 em Brasília                                                 
+       33 +      venda('B', 20, '2026-10-02T03:00:00Z'), // 02/10 00:00:0
+          +0 em Brasília                                                 
+       34 +      venda('C', 40, '2026-10-01T02:00:00Z'), // 30/09 23:00 e
+          +m Brasília                                                    
+       35 +    ];                                                        
+       36 +    expect(totalDoDia(vendas, '2026-10-01')).toBe(10);        
+       37 +    expect(totalDoDia(vendas, '2026-10-02')).toBe(20);        
+       38 +    expect(totalDoDia(vendas, '2026-09-30')).toBe(40);        
+       39 +  });                                                         
+       40 +                                                              
+       41 +  it('aceita horário com fuso explícito', () => {             
+       42 +    expect(totalDoDia([venda('A', 10, '2026-10-01T23:30:00-03:
+          +00')], '2026-10-01')).toBe(10);                               
+       43 +  });                                                         
+       44 +                                                              
+       45 +  it('conta uma vez a venda que a sincronização repetiu', () =
+          +> {                                                           
+       46 +    const vendas = [venda('A', 100, '2026-10-01T15:00:00Z'), v
+          +enda('A', 100, '2026-10-01T15:00:00Z')];                      
+       47 +    expect(totalDoDia(vendas, '2026-10-01')).toBe(100);       
+       48 +  });                                                         
+       49 +                                                              
+       50 +  it('na repetição vale a última ocorrência', () => {         
+       51 +    const pagaDepoisCancelada = [                             
+       52 +      venda('A', 100, '2026-10-01T15:00:00Z', 'paga'),        
+       53 +      venda('A', 100, '2026-10-01T15:00:00Z', 'cancelada'),   
+       54 +    ];                                                        
+       55 +    expect(totalDoDia(pagaDepoisCancelada, '2026-10-01')).toBe
+          +(0);                                                          
+       56 +    expect(totalDoDia([...pagaDepoisCancelada].reverse(), '202
+          +6-10-01')).toBe(100);                                         
+       57 +  });                                                         
+       58 +                                                              
+       59 +  it('não descarta vendas sem id', () => {                    
+       60 +    const vendas = [venda(undefined, 10, '2026-10-01T15:00:00Z
+          +'), venda(undefined, 20, '2026-10-01T16:00:00Z')];            
+       61 +    expect(totalDoDia(vendas, '2026-10-01')).toBe(30);        
+       62 +  });                                                         
+       63 +                                                              
+       64 +  it('soma sem erro de ponto flutuante', () => {              
+       65 +    const vendas = [venda('A', 0.1, '2026-10-01T15:00:00Z'), v
+          +enda('B', 0.2, '2026-10-01T15:00:00Z')];                      
+       66 +    expect(totalDoDia(vendas, '2026-10-01')).toBe(0.3);       
+       67 +  });                                                         
+       68 +                                                              
+       69 +  it('aceita valor vindo como texto', () => {                 
+       70 +    expect(totalDoDia([venda('A', '250.50', '2026-10-01T15:00:
+          +00Z')], '2026-10-01')).toBe(250.5);                           
+       71 +  });                                                         
+       72 +                                                              
+       73 +  it('avisa em vez de sumir com venda de data ou valor inválid
+          +o', () => {                                                   
+       74 +    expect(() => totalDoDia([venda('A', 10, 'ontem')], '2026-1
+          +0-01')).toThrow(/Venda A: data inválida/);                    
+       75 +    expect(() => totalDoDia([venda('B', 'dez', '2026-10-01T15:
+          +00:00Z')], '2026-10-01')).toThrow(/Venda B: valor inválido/); 
+       76 +  });                                                         
+       77  });
+       78 +                                                              
+       79 +describe('ticketMedio', () => {                               
+       80 +  it('01/10/2026: R$ 3.400,50 em 5 vendas pagas = R$ 680,10', 
+          +() => {                                                       
+       81 +    expect(ticketMedio(vendasReais, '2026-10-01')).toBeCloseTo
+          +(680.1, 10);                                                  
+       82 +  });                                                         
+       83 +                                                              
+       84 +  it('não conta canceladas nem repetidas no divisor', () => { 
+       85 +    const vendas = [                                          
+       86 +      venda('A', 100, '2026-10-01T15:00:00Z'),                
+       87 +      venda('A', 100, '2026-10-01T15:00:00Z'),                
+       88 +      venda('B', 300, '2026-10-01T16:00:00Z'),                
+       89 +      venda('C', 999, '2026-10-01T17:00:00Z', 'cancelada'),   
+       90 +    ];                                                        
+       91 +    expect(ticketMedio(vendas, '2026-10-01')).toBe(200);      
+       92 +  });                                                         
+       93 +                                                              
+       94 +  it('usa o mesmo dia de Brasília do total', () => {          
+       95 +    const vendas = [venda('A', 100, '2026-10-02T01:00:00Z'), v
+          +enda('B', 300, '2026-10-01T02:00:00Z')];                      
+       96 +    expect(ticketMedio(vendas, '2026-10-01')).toBe(100);      
+       97 +  });                                                         
+       98 +                                                              
+       99 +  it('dia sem venda paga dá zero', () => {                    
+      100 +    expect(ticketMedio([venda('A', 100, '2026-10-01T15:00:00Z'
+          +, 'cancelada')], '2026-10-01')).toBe(0);                      
+      101 +  });                                                         
+      102 +});                                                           
+  Ran 1 shell command (ctrl+o to expand)
+
+● Os testes passam e o resultado não muda com o fuso da máquina. Agora a prova
+  inversa: os testes novos contra o relatorio.js da main.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Com o código antigo, 13 dos 18 testes falham, restando apenas casos que já
+  funcionavam, como o teste original e "dia sem venda". Vou commitar, dar push e
+  abrir o PR no mesmo formato da Tarefa 3.
+
+  Made 1 scratchpad edit +95, ran 1 shell command, wrote 1 memory (ctrl+o to expand)
+
+● Escrito para: os avaliadores da prova, no PR do GitHub.
+
+  A Tarefa 2 está pronta. Fiz o push da branch tarefa-2 e abri o PR, que ficou
+  aberto sem merge: https://github.com/edylson02-art/Prova-Pr-tica-/pull/2. Como
+  você já tinha pedido push e PR na Tarefa 3, segui o mesmo formato aqui.
+
+  Resultado: npm run relatorio -- 2026-10-01 agora mostra R$ 3.400,50, que bate
+  com o financeiro. O ticket médio ficou em R$ 680,10 (antes R$ 4.501,00 e R$
+  643,00).
+
+  Causa: três erros somados em src/relatorio.js:
+  - o dia era o de UTC, então vendas feitas à noite no horário de Brasília caíam
+    no dia seguinte;
+  - as vendas que a sincronização repete (V-0992, V-0994 e V-0997) eram somadas
+    duas vezes;
+  - o ticket médio dividia por todas as vendas do dia, inclusive canceladas e
+    repetidas.
+
+  Correção: as funções mantêm o mesmo nome e os mesmos parâmetros, e não toquei
+  no data/vendas.json.
+  - O dia é calculado pelo fuso America/Sao_Paulo, que continua certo se o
+    horário de verão voltar.
+  - Em vendas repetidas, vale a última ocorrência de cada id. Vendas sem id
+    nunca são descartadas.
+  - A soma é feita em centavos.
+  - Data ou valor inválido gera um erro com o id da venda, em vez de a venda
+    sumir do total.
+  - O scripts/relatorio.js passou a recusar um dia fora do formato AAAA-MM-DD.
+    Antes, 01/10/2026 mostrava R$ 0,00 sem aviso.
+
+  Como provei:
+  - O teste do relatório passou de 1 para 18 casos, e todos passam. O teste da
+    tela de tarefas continua passando.
+  - Com o código da main, 13 dos 18 falham.
+  - O resultado é o mesmo com a máquina em UTC, Tóquio ou Los Angeles.
+  - Os outros dias do arquivo também estavam errados, e o PR traz a tabela de
+    antes e depois.
+
+  A próxima é a Tarefa 1 (tela de tarefas vazia). Sigo?
+
+> siga, por favor
+
+● Criando a branch tarefa-1 a partir da main:
+
+  Read 2 files, ran 1 shell command (ctrl+o to expand)
+
+● Write(G:\Prova-Pr-tica-\src\tarefas.js)
+  ⎿  Added 30 lines, removed 7 lines
+       1  /**
+       2 - * Lista as tarefas que a pessoa vê quando escolhe uma empresa 
+         -no seletor.                                                    
+       2 + * Empresa escolhida e todas as que estão abaixo dela na árvore
+         +.                                                              
+       3 + * O Set de visitadas evita laço infinito se os dados tiverem c
+         +iclo.                                                          
+       4 + */                                                            
+       5 +function empresaEAbaixo(empresas, empresaId) {                 
+       6 +  if (!empresas.some((e) => e.id === empresaId)) return new Set
+         +();                                                            
+       7 +                                                               
+       8 +  const ids = new Set([empresaId]);                            
+       9 +  const fila = [empresaId];                                    
+      10 +  while (fila.length > 0) {                                    
+      11 +    const atual = fila.shift();                                
+      12 +    for (const e of empresas) {                                
+      13 +      if (e.pai_id === atual && !ids.has(e.id)) {              
+      14 +        ids.add(e.id);                                         
+      15 +        fila.push(e.id);                                       
+      16 +      }                                                        
+      17 +    }                                                          
+      18 +  }                                                            
+      19 +  return ids;                                                  
+      20 +}                                                              
+      21 +                                                               
+      22 +/**                                                            
+      23 + * Lista as tarefas que a pessoa vê quando escolhe uma empresa 
+         +no seletor:                                                    
+      24 + * as da empresa e as de todas as empresas abaixo dela.        
+      25   *
+      26   * @param {object}   p
+      27   * @param {Array}    p.tarefas   lista de tarefas (data/tarefas
+          .json)
+      28   * @param {Array}    p.empresas  lista de empresas (data/empres
+          as.json)
+      29   * @param {number}   p.empresaId empresa escolhida no seletor
+       8 - * @param {string}   p.de        data inicial, 'YYYY-MM-DD'    
+       9 - * @param {string}   p.ate       data final, 'YYYY-MM-DD'      
+      10 - * @returns {Array} tarefas ordenadas pela data de criação     
+      30 + * @param {string}   p.de        data inicial, 'YYYY-MM-DD', in
+         +clusive (vazia = sem limite)                                   
+      31 + * @param {string}   p.ate       data final, 'YYYY-MM-DD', incl
+         +usive (vazia = sem limite)                                     
+      32 + * @returns {Array} tarefas ordenadas pela data de criação (emp
+         +ate: pelo id)                                                  
+      33   */
+      34  export function listarTarefas({ tarefas, empresas, empresaId, d
+          e, ate }) {
+      35 +  const visiveis = empresaEAbaixo(empresas, empresaId);        
+      36    return tarefas
+      14 -    .filter((t) => t.empresa_id === empresaId)                 
+      15 -    .filter((t) => t.criada_em > de && t.criada_em < ate)      
+      16 -    .sort((a, b) => a.criada_em.localeCompare(b.criada_em));   
+      37 +    .filter((t) => visiveis.has(t.empresa_id))                 
+      38 +    .filter((t) => (!de || t.criada_em >= de) && (!ate || t.cri
+         +ada_em <= ate))                                                
+      39 +    .sort((a, b) => a.criada_em.localeCompare(b.criada_em) || a
+         +.id - b.id);                                                   
+      40  }
+
+● Write(G:\Prova-Pr-tica-\test\tarefas.test.js)
+  ⎿  Added 79 lines
+       3  import tarefas from '../data/tarefas.json';
+       4  import { listarTarefas } from '../src/tarefas.js';
+       5  
+       6 +// Grupo Aurora (1) ── Aurora Serviços (2) ── Aurora Campo (4) 
+       7 +//                 └── Vértice Finanças (3)                    
+       8 +// Outra Empresa S.A. (5), fora do grupo                       
+       9 +const listar = (empresaId, de = '2026-09-01', ate = '2026-10-31
+         +', dados = { tarefas, empresas }) =>                           
+      10 +  listarTarefas({ ...dados, empresaId, de, ate }).map((t) => t.
+         +id);                                                           
+      11 +                                                               
+      12  describe('listarTarefas', () => {
+      13    it('lista as tarefas da Vértice Finanças em setembro', () => 
+          {
+      14      const r = listarTarefas({ tarefas, empresas, empresaId: 3, 
+          de: '2026-09-01', ate: '2026-09-30' });
+      15      expect(r.map((t) => t.id)).toEqual([105, 106]);
+      16    });
+      17 +                                                               
+      18 +  describe('árvore de empresas', () => {                       
+      19 +    it('Grupo Aurora vê as tarefas de todo o grupo, sem a Outra
+         + Empresa', () => {                                             
+      20 +      expect(listar(1)).toEqual([101, 102, 103, 104, 105, 106, 
+         +108, 109, 110, 112, 113, 114, 115]);                           
+      21 +    });                                                        
+      22 +                                                               
+      23 +    it('Aurora Serviços vê as próprias tarefas e as da Aurora C
+         +ampo', () => {                                                 
+      24 +      expect(listar(2)).toEqual([101, 102, 103, 104, 108, 109, 
+         +112, 113, 115]);                                               
+      25 +    });                                                        
+      26 +                                                               
+      27 +    it('Aurora Campo vê só as próprias (não sobe na árvore)', (
+         +) => {                                                         
+      28 +      expect(listar(4)).toEqual([103, 104, 109, 113]);         
+      29 +    });                                                        
+      30 +                                                               
+      31 +    it('Outra Empresa vê só as próprias, e o grupo não a vê', (
+         +) => {                                                         
+      32 +      expect(listar(5)).toEqual([107, 111]);                   
+      33 +      for (const id of [1, 2, 3, 4]) expect(listar(id)).not.toC
+         +ontain(107);                                                   
+      34 +    });                                                        
+      35 +                                                               
+      36 +    it('empresa que não existe não vê nada', () => {           
+      37 +      expect(listar(99)).toEqual([]);                          
+      38 +    });                                                        
+      39 +                                                               
+      40 +    it('desce mais de um nível', () => {                       
+      41 +      const dados = {                                          
+      42 +        empresas: [...empresas, { id: 6, nome: 'Neta', pai_id: 
+         +4 }],                                                          
+      43 +        tarefas: [...tarefas, { id: 200, empresa_id: 6, titulo:
+         + 'x', status: 'aberta', criada_em: '2026-09-10' }],            
+      44 +      };                                                       
+      45 +      expect(listar(1, undefined, undefined, dados)).toContain(
+         +200);                                                          
+      46 +      expect(listar(2, undefined, undefined, dados)).toContain(
+         +200);                                                          
+      47 +      expect(listar(3, undefined, undefined, dados)).not.toCont
+         +ain(200);                                                      
+      48 +    });                                                        
+      49 +                                                               
+      50 +    it('não trava se os dados da árvore tiverem ciclo', () => {
+      51 +      const comCiclo = empresas.map((e) => (e.id === 1 ? { ...e
+         +, pai_id: 4 } : e)); // 1 → 2 → 4 → 1                          
+      52 +      expect(listar(2, undefined, undefined, { tarefas, empresa
+         +s: comCiclo })).toHaveLength(13);                              
+      53 +    });                                                        
+      54 +  });                                                          
+      55 +                                                               
+      56 +  describe('período', () => {                                  
+      57 +    it('inclui a tarefa criada no primeiro dia do filtro', () =
+         +> {                                                            
+      58 +      expect(listar(2, '2026-09-01', '2026-09-05')).toEqual([10
+         +1, 102]);                                                      
+      59 +    });                                                        
+      60 +                                                               
+      61 +    it('inclui a tarefa criada no último dia do filtro', () => 
+         +{                                                              
+      62 +      expect(listar(2, '2026-09-25', '2026-09-30')).toEqual([10
+         +8]);                                                           
+      63 +    });                                                        
+      64 +                                                               
+      65 +    it('período de um dia só (de = até)', () => {              
+      66 +      expect(listar(1, '2026-10-01', '2026-10-01')).toEqual([10
+         +9, 110]);                                                      
+      67 +    });                                                        
+      68 +                                                               
+      69 +    it('de depois de até não traz nada', () => {               
+      70 +      expect(listar(1, '2026-10-31', '2026-09-01')).toEqual([])
+         +;                                                              
+      71 +    });                                                        
+      72 +                                                               
+      73 +    it('data apagada no filtro vira "sem limite"', () => {     
+      74 +      expect(listar(3, '', '2026-09-30')).toEqual([105, 106]); 
+      75 +      expect(listar(3, '2026-10-01', '')).toEqual([110, 114]); 
+      76 +      expect(listar(3, '', '')).toEqual([105, 106, 110, 114]); 
+      77 +    });                                                        
+      78 +  });                                                          
+      79 +                                                               
+      80 +  it('ordena pela data e, no mesmo dia, pelo id', () => {      
+      81 +    const embaralhadas = [...tarefas].reverse();               
+      82 +    expect(listar(1, '2026-09-15', '2026-09-15', { tarefas: emb
+         +aralhadas, empresas })).toEqual([104, 105]);                   
+      83 +  });                                                          
+      84 +                                                               
+      85 +  it('não altera a lista recebida', () => {                    
+      86 +    const copia = structuredClone(tarefas);                    
+      87 +    listar(1);                                                 
+      88 +    expect(tarefas).toEqual(copia);                            
+      89 +  });                                                          
+      90  });
+
+● Write(G:\Prova-Pr-tica-\test\App.test.jsx)
+  ⎿  Wrote 14 lines to ..\..\..\Prova-Pr-tica-\test\App.test.jsx
+       1 import { describe, it, expect } from 'vitest';
+       2 import { renderToStaticMarkup } from 'react-dom/server';
+       4
+       5 describe('tela de tarefas', () => {
+       6   it('abre com o Grupo Aurora mostrando as tarefas do grupo', ()
+       7     const html = renderToStaticMarkup(<App />);
+       8     expect(html).not.toContain('Nenhuma tarefa no período');
+       9     expect(html).toContain('Revisar proposta do cliente Almeida'
+      10     expect(html).toContain('Visita técnica'); // 103, da Aurora
+         Campo (neta do grupo)
+     … +9 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Com a correção, todos os 17 testes passam; com o código original da main, 10
+  dos 16 testes da tela falhavam. Agora vou commitar, dar push e abrir o PR.
+
+  Made 1 scratchpad edit +71, ran 1 shell command, wrote 1 memory (ctrl+o to expand)
+
+● Escrito para: os avaliadores da prova, no PR do GitHub.
+
+  A Tarefa 1 está pronta. Fiz o push da branch tarefa-1 e abri o PR, que ficou
+  aberto sem merge: https://github.com/edylson02-art/Prova-Pr-tica-/pull/3.
+
+  Causa: dois erros em src/tarefas.js.
+  - A função filtrava só a empresa escolhida, sem incluir as que estão abaixo
+    dela. O Grupo Aurora não tem nenhuma tarefa própria (estão todas nas
+    filhas), então a tela abria vazia. A função até recebia a lista de empresas,
+    mas nunca a usava.
+  - O período usava > e <, então tarefas criadas exatamente no primeiro ou no
+    último dia do filtro sumiam. A cliente estava certa, e o primeiro dia também
+    era afetado.
+
+  Correção: só em src/tarefas.js, com o mesmo nome e os mesmos parâmetros de
+  listarTarefas.
+  - Inclui a empresa escolhida e todas as que estão abaixo dela, em qualquer
+    profundidade, sem travar se houver ciclo nos dados.
+  - O período agora inclui o primeiro e o último dia.
+  - Data apagada no filtro passa a significar "sem limite".
+  - No mesmo dia, as tarefas são ordenadas pelo id.
+  - O App.jsx não precisou mudar.
+
+  Como provei:
+  - O teste de listarTarefas passou de 1 para 15 casos.
+  - Criei um teste novo que monta a tela de verdade: ela abre com o Grupo Aurora
+    mostrando 13 tarefas, sem a Outra Empresa.
+  - Com o código da main, 10 dos 16 falham.
+
+  Como o servidor de desenvolvimento usa a pasta do projeto, que agora está na
+  branch tarefa-1, basta recarregar http://localhost:5173 para ver a tela com
+  tarefas.
+
+  O PR deixa registrado que isso corrige a tela, mas não protege os dados: o
+  navegador recebe as tarefas de todas as empresas, e a proteção de verdade é a
+  do banco (Tarefa 3).
+
+  A próxima, pela ordem combinada, é a Tarefa 5 (exportar CSV), e depois a
+  Tarefa 4. As duas mexem na mesma tabela do App.jsx, por isso deixei a 4 por
+  último. Sigo para a 5?
+
+> sim, por favor
+
+● Criando a branch tarefa-5 a partir da main:
+
+  Read 2 files, ran 1 shell command (ctrl+o to expand)
+
+● Write(G:\Prova-Pr-tica-\src\exportar.js)
+  ⎿  Added 39 lines, removed 2 lines
+       1 +const SEPARADOR = ';'; // padrão do Excel em português         
+       2 +const BOM = ''; // sem ele o Excel lê o arquivo como ANSI e est
+         +raga os acentos                                                
+       3 +                                                               
+       4 +// O Excel executa como fórmula um campo que começa com estes c
+         +aracteres, mesmo                                               
+       5 +// entre aspas ("=SOMA(...)", "=HYPERLINK(...)"). O apóstrofo n
+         +a frente faz o                                                 
+       6 +// campo ser lido como texto.                                  
+       7 +const INICIO_DE_FORMULA = /^[=+\-@\t\r]/;                      
+       8 +                                                               
+       9 +/** 'YYYY-MM-DD' (ou ISO com hora) → 'DD/MM/AAAA'. Sem passar p
+         +or Date, para                                                  
+      10 + *  o fuso do computador não mudar o dia. */                   
+      11 +function dataBR(valor) {                                       
+      12 +  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(valor ?? '');      
+      13 +  return m ? `${m[3]}/${m[2]}/${m[1]}` : valor;                
+      14 +}                                                              
+      15 +                                                               
+      16 +function campo(valor) {                                        
+      17 +  let texto = String(valor ?? '');                             
+      18 +  if (INICIO_DE_FORMULA.test(texto)) texto = `'${texto}`;      
+      19 +  // separador, aspas ou quebra de linha no meio do texto: entr
+         +e aspas, com as                                                
+      20 +  // aspas internas dobradas, para o campo continuar numa colun
+         +a só                                                           
+      21 +  if (/[;"\r\n]/.test(texto)) texto = `"${texto.replace(/"/g, '
+         +""')}"`;                                                       
+      22 +  return texto;                                                
+      23 +}                                                              
+      24 +                                                               
+      25  /** Gera o CSV das tarefas para o financeiro abrir no Excel. */
+      26  export function gerarCSV(tarefas) {
+       3 -  const linhas = tarefas.map((t) => [t.id, t.titulo, t.status, 
+         -t.criada_em].join(','));                                       
+       4 -  return ['id,titulo,status,criada_em', ...linhas].join('\n'); 
+      27 +  const linhas = tarefas.map((t) =>                            
+      28 +    [t.id, t.titulo, t.status, dataBR(t.criada_em)].map(campo).
+         +join(SEPARADOR));                                              
+      29 +  return BOM + ['id;titulo;status;criada_em', ...linhas].join('
+         +\n');                                                          
+      30  }
+      31 +                                                               
+      32 +/** Baixa no navegador o CSV das tarefas recebidas. */         
+      33 +export function baixarCSV(tarefas, nomeArquivo = 'tarefas.csv')
+         + {                                                             
+      34 +  const arquivo = new Blob([gerarCSV(tarefas)], { type: 'text/c
+         +sv;charset=utf-8' });                                          
+      35 +  const url = URL.createObjectURL(arquivo);                    
+      36 +  const link = document.createElement('a');                    
+      37 +  link.href = url;                                             
+      38 +  link.download = nomeArquivo;                                 
+      39 +  link.click();                                                
+      40 +  // libera a memória depois que o navegador já começou o downl
+         +oad                                                            
+      41 +  setTimeout(() => URL.revokeObjectURL(url), 0);               
+      42 +}                                                              
+
+● Update(G:\Prova-Pr-tica-\src\App.jsx)
+  ⎿  Added 1 line
+      2  import empresas from '../data/empresas.json';
+      3  import tarefas from '../data/tarefas.json';
+      4  import { listarTarefas } from './tarefas.js';
+      5 +import { baixarCSV } from './exportar.js';                      
+      6  
+      7  export function App() {
+      8    const [empresaId, setEmpresaId] = useState(1);
+
+● Update(G:\Prova-Pr-tica-\src\App.jsx)
+  ⎿  Added 8 lines
+      22          </select>
+      23          <label>De <input type="date" value={de} onChange={(e) =
+          > setDe(e.target.value)} /></label>
+      24          <label>Até <input type="date" value={ate} onChange={(e)
+           => setAte(e.target.value)} /></label>
+      25 +        {/* exporta exatamente o que está na tela (empresa e pe
+         +ríodo escolhidos) */}                                          
+      26 +        <button                                                
+      27 +          type="button"                                        
+      28 +          disabled={lista.length === 0}                        
+      29 +          onClick={() => baixarCSV(lista, `tarefas_${de || 'ini
+         +cio'}_a_${ate || 'hoje'}.csv`)}                                
+      30 +        >                                                      
+      31 +          Exportar CSV                                         
+      32 +        </button>                                              
+      33        </div>
+      34        {lista.length === 0 ? (
+      35          <p>Nenhuma tarefa no período.</p>
+
+● Write(G:\Prova-Pr-tica-\test\exportar.test.js)
+  ⎿  Wrote 135 lines to ..\..\..\Prova-Pr-tica-\test\exportar.test.js
+       1 import { describe, it, expect, vi, afterEach } from 'vitest';
+       2 import tarefas from '../data/tarefas.json';
+       4
+       5 const BOM = '';
+       6 const tarefa = (titulo, extra = {}) => ({ id: 1, titulo, status:
+       7
+       8 // Leitor de CSV como o Excel em português: separador ';', aspas
+          delimitam o
+          colunas.
+      10 function lerComoExcel(csv) {
+     … +148 lines (ctrl+o to expand)
+
+● Write(G:\Prova-Pr-tica-\test\App.exportar.test.jsx)
+  ⎿  Wrote 9 lines to ..\..\..\Prova-Pr-tica-\test\App.exportar.test.jsx
+      1 import { describe, it, expect } from 'vitest';
+      2 import { renderToStaticMarkup } from 'react-dom/server';
+      3 import { App } from '../src/App.jsx';
+      4
+      5 describe('botão Exportar CSV', () => {
+      6   it('aparece na tela', () => {
+      7     expect(renderToStaticMarkup(<App />)).toMatch(/<button[^>]*>E
+        xportar CSV<\/button>/);
+      8   });
+      9 });
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Os 26 testes passaram. Agora a prova inversa contra a main. Também vou gerar
+  um CSV de exemplo na pasta temporária para você abrir no Excel:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Com o código da main, 22 dos 23 testes falham. O único que passa é "mantém os
+  acentos", porque o texto já saía certo: o problema era o Excel ler o arquivo
+  sem o BOM. Commit, push e PR:
+
+  Made 1 scratchpad edit +82, ran 1 shell command, wrote 1 memory (ctrl+o to expand)
+
+● Escrito para: os avaliadores da prova, no PR do GitHub.
+
+  A Tarefa 5 está pronta. Fiz o push da branch tarefa-5 e abri o PR, que ficou
+  aberto sem merge: https://github.com/edylson02-art/Prova-Pr-tica-/pull/4.
+
+  Causa: o CSV tinha cinco defeitos:
+  - o separador era ,, e o Excel em português espera ;, por isso tudo ia para
+    uma coluna só;
+  - faltava a marca de codificação no início do arquivo (BOM), por isso os
+    acentos saíam estranhos;
+  - os campos não tinham aspas, então títulos com ; ou aspas quebravam as
+    colunas;
+  - a tarefa 114 (=SOMA(...)) seria executada como fórmula no Excel;
+  - as datas saíam como AAAA-MM-DD.
+
+  Correção:
+  - O gerarCSV mantém o mesmo nome e os mesmos parâmetros.
+  - Separador ;, BOM no início e datas DD/MM/AAAA.
+  - Aspas só nos campos que precisam.
+  - Um apóstrofo na frente de qualquer campo que o Excel trataria como fórmula,
+    em todos os campos.
+  - O botão "Exportar CSV" baixa exatamente a lista que está na tela.
+
+  Como provei:
+  - São 23 testes do CSV mais 1 do botão, e todos passam.
+  - Com o código da main, 22 dos 23 falham. O único que passa é o dos acentos,
+    porque o texto já saía certo; faltava só o BOM para o Excel reconhecê-lo.
+
+  Ficaram de fora e estão registrados no PR:
+  - O clique no botão não tem teste automatizado. O projeto não tem uma
+    biblioteca que simule o navegador (como o jsdom), e não quis adicionar uma
+    dependência só para isso.
+  - Nesta branch o botão abre desabilitado, porque na main a tela ainda vem
+    vazia com o Grupo Aurora. Isso se resolve junto com o PR #3.
+
+  Para você conferir no Excel: gerei um arquivo com as 15 tarefas em C:\Users\us
+  er\AppData\Local\Temp\claude\g--Projetos-ES-Nexus-Nexus-G-s-independencia-gas-
+  base-v1\97d0290f-9dac-40e2-986d-3e3b142f48c9\scratchpad\tarefas-exemplo.csv.
+  Cada campo deve cair na sua coluna, com os acentos certos e a 114 como texto.
+  Esse é o único teste que precisa do Excel de verdade, e eu não consigo fazê-lo
+  daqui.
+
+  Falta a Tarefa 4 (prazo em dias úteis com a API de feriados). Depois dela, só
+  o STATUS.md e a pasta sessoes/ na main. Sigo?
+
+> siga, por favor
+
+● Criando a branch tarefa-4 a partir da main:
+  Read 3 files, ran 1 shell command (ctrl+o to expand)
+
+● Write(G:\Prova-Pr-tica-\src\prazo.js)
+  ⎿  Added 31 lines, removed 6 lines
+       1 +const UM_DIA = 24 * 60 * 60 * 1000;                            
+       2 +const MAX_DIAS = 3650; // trava contra prazo absurdo travar a t
+         +ela num laço gigante                                           
+       3 +                                                               
+       4  /**
+       2 - * Prazo de atendimento (SLA) de uma tarefa.                   
+       5 + * Prazo de atendimento (SLA) de uma tarefa, em dias úteis.    
+       6   *
+       7 + * O prazo começa a contar no dia seguinte à criação. Dia útil 
+         +é de segunda a                                                 
+       8 + * sexta, exceto os feriados recebidos. Prazo de 0 dias é o pró
+         +prio dia.                                                      
+       9 + *                                                             
+      10   * @param {string}   criadaEm   data de criação, 'YYYY-MM-DD'
+       5 - * @param {number}   dias       quantos dias o cliente contrato
+         -u                                                              
+      11 + * @param {number}   dias       quantos dias úteis o cliente co
+         +ntratou                                                        
+      12   * @param {string[]} feriados   datas 'YYYY-MM-DD' que não cont
+          am
+      13   * @returns {string} data do prazo, 'YYYY-MM-DD'
+      14   */
+       9 -export function prazoSLA(criadaEm, dias, feriados) {           
+      10 -  const d = new Date(criadaEm);                                
+      11 -  d.setDate(d.getDate() + dias);                               
+      12 -  return d.toISOString().slice(0, 10);                         
+      15 +export function prazoSLA(criadaEm, dias, feriados = []) {      
+      16 +  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(criadaEm ?? '');  
+      17 +  // tudo em UTC: o fuso do computador (e o horário de verão) n
+         +ão muda o dia                                                  
+      18 +  let dia = m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number
+         +(m[3])) : NaN;                                                 
+      19 +  if (Number.isNaN(dia) || isoDe(dia) !== criadaEm) {          
+      20 +    throw new Error(`Data de criação inválida: ${criadaEm}`);  
+      21 +  }                                                            
+      22 +  if (!Number.isInteger(dias) || dias < 0 || dias > MAX_DIAS) {
+      23 +    throw new RangeError(`Prazo inválido: ${dias} (inteiro de 0
+         + a ${MAX_DIAS})`);                                             
+      24 +  }                                                            
+      25 +                                                               
+      26 +  const naoContam = new Set(feriados.map((f) => String(f).slice
+         +(0, 10)));                                                     
+      27 +  let uteis = 0;                                               
+      28 +  while (uteis < dias) {                                       
+      29 +    dia += UM_DIA;                                             
+      30 +    const semana = new Date(dia).getUTCDay(); // 0 = domingo, 6
+         + = sábado                                                      
+      31 +    if (semana !== 0 && semana !== 6 && !naoContam.has(isoDe(di
+         +a))) uteis++;                                                  
+      32 +  }                                                            
+      33 +  return isoDe(dia);                                           
+      34  }
+      35 +                                                               
+      36 +function isoDe(ms) {                                           
+      37 +  return new Date(ms).toISOString().slice(0, 10);              
+      38 +}                                                              
+
+● Write(G:\Prova-Pr-tica-\src\feriados.js)
+  ⎿  Wrote 51 lines to ..\..\..\Prova-Pr-tica-\src\feriados.js
+       1 // Feriados nacionais da BrasilAPI (https://brasilapi.com.br/doc
+       2 // pública, gratuita, sem chave e mantida no Brasil. Aceita anos
+          de 1900 a 2199.
+       4 const MINIMO = 8; // o país tem pelo menos 8 feriados nacionais
+       5
+       6 /** Valida o ano vindo da linha de comando. Ele vira parte da UR
+       7  *  arquivo, então só passa um número de 4 dígitos (nada de "../
+         ../"). */
+       9   if (!/^\d{4}$/.test(String(texto ?? ''))) {
+         .: npm run feriados -- 2026`);
+     … +59 lines (ctrl+o to expand)
+
+● Write(G:\Prova-Pr-tica-\scripts\feriados.js)
+  ⎿  Wrote 21 lines to ..\..\..\Prova-Pr-tica-\scripts\feriados.js
+       1 // Baixa os feriados nacionais do ano e salva em data/feriados-<
+         ano>.json.
+       2 // Uso: npm run feriados -- 2026
+       4 import { baixarFeriados, validarAno } from '../src/feriados.js';
+       5
+       6 try {
+       7   const ano = validarAno(process.argv[2]);
+       9
+      10   // grava num temporário e renomeia: se algo falhar no meio, o
+         arquivo antigo fica intacto
+     … +18 lines (ctrl+o to expand)
+
+● Update(G:\Prova-Pr-tica-\package.json)
+  ⎿  Added 2 lines, removed 1 line
+       6      "dev": "vite",
+       7      "test": "vitest run",
+       8      "relatorio": "node scripts/relatorio.js",
+       9 -    "db": "node scripts/db.js"                                 
+       9 +    "db": "node scripts/db.js",                                
+      10 +    "feriados": "node scripts/feriados.js"                     
+      11    },
+      12    "dependencies": {
+      13      "react": "18.3.1",
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● O arquivo data/feriados-2026.json foi gerado pela API, e o ano malicioso foi
+  recusado. Agora a coluna de prazo na tela:
+
+● Update(G:\Prova-Pr-tica-\src\App.jsx)
+  ⎿  Added 18 lines
+       2  import empresas from '../data/empresas.json';
+       3  import tarefas from '../data/tarefas.json';
+       4  import { listarTarefas } from './tarefas.js';
+       5 +import { prazoSLA } from './prazo.js';                         
+       6  
+       7 +const SLA_DIAS_UTEIS = 3;                                      
+       8 +                                                               
+       9 +// Todos os data/feriados-<ano>.json baixados com `npm run feri
+         +ados -- <ano>`:                                                
+      10 +// um ano novo entra na conta sem mudar código.                
+      11 +const arquivosDeFeriados = import.meta.glob('../data/feriados-*
+         +.json', { eager: true, import: 'default' });                   
+      12 +const feriados = Object.values(arquivosDeFeriados).flat().map((
+         +f) => f.date);                                                 
+      13 +const anosComFeriados = new Set(feriados.map((d) => d.slice(0, 
+         +4)));                                                          
+      14 +                                                               
+      15 +function Prazo({ criadaEm }) {                                 
+      16 +  const prazo = prazoSLA(criadaEm, SLA_DIAS_UTEIS, feriados);  
+      17 +  const faltando = [criadaEm, prazo].map((d) => d.slice(0, 4)).
+         +filter((ano) => !anosComFeriados.has(ano));                    
+      18 +  if (faltando.length === 0) return prazo;                     
+      19 +  // sem o arquivo do ano, feriados contariam como dia útil: av
+         +isa em vez de esconder                                         
+      20 +  const aviso = `Feriados de ${[...new Set(faltando)].join(' e 
+         +')} não baixados (npm run feriados -- ${faltando[0]})`;        
+      21 +  return <span title={aviso}>{prazo} ⚠</span>;                 
+      22 +}                                                              
+      23 +                                                               
+      24  export function App() {
+      25    const [empresaId, setEmpresaId] = useState(1);
+      26    const [de, setDe] = useState('2026-09-01');
+
+● Update(G:\Prova-Pr-tica-\src\App.jsx)
+  ⎿  Added 8 lines, removed 2 lines
+      45        ) : (
+      46          <table width="100%" cellPadding={6}>
+      47            <thead>
+      48 -            <tr><th align="left">Data</th><th align="left">Tare
+         -fa</th><th align="left">Status</th></tr>                       
+      48 +            <tr>                                               
+      49 +              <th align="left">Data</th><th align="left">Tarefa
+         +</th><th align="left">Status</th>                              
+      50 +              <th align="left" title={`${SLA_DIAS_UTEIS} dias ú
+         +teis, sem feriados nacionais`}>Prazo</th>                      
+      51 +            </tr>                                              
+      52            </thead>
+      53            <tbody>
+      54              {lista.map((t) => (
+      52 -              <tr key={t.id}><td>{t.criada_em}</td><td>{t.titul
+         -o}</td><td>{t.status}</td></tr>                                
+      55 +              <tr key={t.id}>                                  
+      56 +                <td>{t.criada_em}</td><td>{t.titulo}</td><td>{t
+         +.status}</td>                                                  
+      57 +                <td><Prazo criadaEm={t.criada_em} /></td>      
+      58 +              </tr>                                            
+      59              ))}
+      60            </tbody>
+      61          </table>
+
+● Write(G:\Prova-Pr-tica-\test\prazo.test.js)
+  ⎿  Wrote 79 lines to ..\..\..\Prova-Pr-tica-\test\prazo.test.js
+       1 import { describe, it, expect } from 'vitest';
+       2 import feriados2026 from '../data/feriados-2026.json';
+       3 import { prazoSLA } from '../src/prazo.js';
+       5 const feriados = feriados2026.map((f) => f.date);
+       6
+       7 describe('prazoSLA', () => {
+       8   it('o caso do chamado: criada na sexta com 1 dia vence na segu
+       9     expect(prazoSLA('2026-10-02', 1, feriados)).toBe('2026-10-05
+         ');
+      10   });
+     … +86 lines (ctrl+o to expand)
+
+● Write(G:\Prova-Pr-tica-\test\feriados.test.js)
+  ⎿  Wrote 78 lines to ..\..\..\Prova-Pr-tica-\test\feriados.test.js
+      1 import { describe, it, expect, vi } from 'vitest';
+        /src/feriados.js';
+      3
+        ados do app)
+      5 const respostaValida = (ano = 2026) => [
+        '04-21', 'Tiradentes'],
+      7   ['05-01', 'Dia do trabalho'], ['09-07', 'Independência do Brasi
+      8   ['11-02', 'Finados'], ['11-15', 'Proclamação da República'], ['
+        12-25', 'Natal'],
+        nal' })).reverse();
+     … +92 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Os 50 testes passaram. Agora a prova inversa contra o prazo.js da main, e a
+  conferência de que o resultado não muda com o fuso da máquina:
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Confirmei que o código antigo falha 23 dos 30 testes nos 5 fusos testados.
+  Agora vou commitar e, antes do push, simular a integração juntando as 5
+  branches numa branch temporária para validar a tela completa.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Vou ajustar a branch tarefa-4 para inserir o import em outro ponto do App.jsx,
+  evitando o conflito com o import que a Tarefa 5 acrescenta na mesma linha.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Update(G:\Prova-Pr-tica-\src\App.jsx)
+  ⎿  Added 1 line, removed 1 line
+      1  import { useState } from 'react';
+      2  import empresas from '../data/empresas.json';
+      3  import tarefas from '../data/tarefas.json';
+      4 -import { listarTarefas } from './tarefas.js';                   
+      4  import { prazoSLA } from './prazo.js';
+      5 +import { listarTarefas } from './tarefas.js';                   
+      6  
+      7  const SLA_DIAS_UTEIS = 3;
+      8  
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● As 5 branches integram sem conflito desde que tarefa-4 venha por último. Agora
+  vou rodar a suíte completa na branch de ensaio, incluindo um teste temporário
+  de tela cheia que não será commitado.
+
+● Write(G:\Prova-Pr-tica-\test\zz-ensaio.test.jsx)
+  ⎿  Wrote 14 lines to ..\..\..\Prova-Pr-tica-\test\zz-ensaio.test.jsx
+       1 import { it, expect } from 'vitest';
+       2 import { renderToStaticMarkup } from 'react-dom/server';
+       3 import { App } from '../src/App.jsx';
+       4
+       5 it('ensaio: tela completa com as 5 tarefas juntas', () => {
+       7   const linhas = [...html.matchAll(/<tr><td>([^<]+)<\/td><td>([^
+         <]+)<\/td><td>[^<]+<\/td><td>([^<]+)<\/td><\/tr>/g)]
+       8     .map((m) => `${m[1]} → ${m[3]}  ${m[2]}`);
+       9   console.log(linhas.join('\n'));
+      10   expect(html).toContain('>Prazo</th>');
+     … +7 lines (ctrl+o to expand)
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Na branch de ensaio com as 5 branches combinadas, os 139 testes passaram
+  (incluindo o temporário), e validei visualmente o Grupo Aurora, o relatório de
+  R$ 3.400,50 e o isolamento das tarefas da Vértice. Removi a branch e o teste
+  temporário; agora vou fazer o push e abrir o PR da Tarefa 4.
+
+  Made 1 scratchpad edit +125, ran 1 shell command, wrote 1 memory (ctrl+o to expand)
+
+● Escrito para: os avaliadores da prova, no PR do GitHub.
+
+  A Tarefa 4 está pronta. Fiz o push da branch tarefa-4 e abri o PR, que ficou
+  aberto sem merge: https://github.com/edylson02-art/Prova-Pr-tica-/pull/5. Com
+  isso, as 5 tarefas têm PR aberto (#1 a #5).
+
+  Causa: o prazoSLA somava dias corridos e nunca usava a lista de feriados que
+  recebia. Também não existia nem o comando nem o arquivo de feriados.
+
+  Correção:
+  - prazoSLA: mantém o mesmo nome e os mesmos parâmetros. Conta só dias úteis a
+    partir do dia seguinte à criação, faz todas as contas em UTC e recusa datas
+    ou prazos inválidos.
+  - npm run feriados -- 2026: baixa os feriados nacionais da BrasilAPI.
+    - Ano malicioso como ../../x é recusado antes de chamar a API.
+    - A resposta é conferida antes de gravar: precisa ter pelo menos 8 feriados
+      nacionais do ano pedido.
+    - A requisição tem limite de 10 segundos e não precisa de dependência nova.
+    - Se algo falhar no meio da gravação, o arquivo antigo fica intacto.
+  - data/feriados-2026.json: gerado por esse comando (14 feriados) e incluído no
+    commit.
+  - Coluna "Prazo" na tela, com SLA de 3 dias úteis. Ela carrega sozinha
+    qualquer ano de feriados baixado e mostra um ⚠ se o prazo cair num ano cujo
+    arquivo ainda não foi baixado.
+
+  Como provei:
+  - São 30 testes de prazo, usando o arquivo real de feriados, e 18 testes do
+    comando. Todos passam.
+  - Com o código da main, 23 dos 30 testes de prazo falham.
+  - O resultado é o mesmo em 5 fusos diferentes.
+
+  Ensaio de integração: juntei as 5 branches numa branch temporária, que já
+  apaguei. Havia um conflito no topo do App.jsx entre as Tarefas 4 e 5. Corrigi
+  a tarefa-4 antes do push mudando a posição de um import, e agora as cinco se
+  juntam sem conflito. Com tudo junto, todos os testes passam e a tela abre
+  completa: 13 tarefas com prazo e o botão de exportar habilitado.
+
+  Falta para entregar:
+  1. STATUS.md na main: posso preencher agora com o que está nos PRs e na
+     auditoria. Seu nome e o tempo total gasto precisam vir de você.
+  2. Histórico da sessão em sessoes/: o /export é um comando seu no Claude Code,
+     e eu não consigo rodá-lo. Quando terminarmos, rode /export e salve o
+     arquivo em G:\Prova-Pr-tica-\sessoes\. Eu faço o commit.
+  3. Mandar o link do repositório pelo WhatsApp: isso é com você.
+
+  Quer que eu escreva o STATUS.md? Se quiser, me diga o nome e o tempo para eu
+  já incluir.
+
+> Edilson Santos Tempo total gasto (aprox.): ~1h40 (das 19:44 às 21:20)
+
+● Vou para a main preencher o STATUS.md:
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+● Write(G:\Prova-Pr-tica-\STATUS.md)  ⎿  Added 104 lines, removed 21 lines
+        1  # Status da entrega
+        2  
+        3 -> Preencha este arquivo na branch `main` antes de entregar.   
+        3 +**Nome:** Edilson Santos                                      
+        4 +**Tempo total gasto (aprox.):** ~1h40 (das 19:44 às 21:20)    
+        5  
+        5 -**Nome:**                                                     
+        6 -**Tempo total gasto (aprox.):**                               
+        6 +Trabalhei com o Claude Code. O histórico da sessão está em [`s
+          +essoes/`](sessoes/).                                          
+        7  
+        8  ## Ordem em que trabalhei
+        9  
+       10 -<!-- Em que ordem pegou as tarefas e por quê. -->             
+       10 +Antes de mexer em código, fiz uma **auditoria do projeto intei
+          +ro**: rodei cada comando do README, reproduzi cada chamado e t
+          +estei hipóteses no banco em memória. Depois **ataquei a correç
+          +ão que eu ia propor para a Tarefa 3**, para achar furos antes 
+          +de escrever o código. Mandei quatro dúvidas pelo WhatsApp e a 
+          +resposta foi que a decisão era minha. As decisões estão regist
+          +radas em cada PR.                                             
+       11  
+       12 +Ordem: **3 → 2 → 1 → 5 → 4**.                                 
+       13 +                                                              
+       14 +1. **Tarefa 3**: vazamento de dados entre clientes é o problem
+          +a mais grave. Além de ler, qualquer pessoa conseguia criar, al
+          +terar e apagar tarefas de outras empresas.                    
+       15 +2. **Tarefa 2**: número financeiro errado, que afeta decisões.
+       16 +3. **Tarefa 1**: a tela principal abria vazia.                
+       17 +4. **Tarefa 5**: rápida, mas escondia um risco de segurança (f
+          +órmula executada no Excel).                                   
+       18 +5. **Tarefa 4**: a maior (API externa, comando novo, coluna na
+          + tela). Ficou por último também porque mexe na mesma tabela do
+          + `App.jsx` que a 5.                                           
+       19 +                                                              
+       20 +Cada tarefa tem uma branch saindo da `main` e um PR aberto. No
+          + fim, juntei as cinco numa branch temporária (já apagada) para
+          + garantir que **se juntam sem conflito e todos os testes passa
+          +m juntos**.                                                   
+       21 +                                                              
+       22  ## Tarefa 1 — Tela de tarefas
+       23  
+       14 -- **Situação:** pronta / parcial / não comecei                
+       15 -- **Qual era o problema:**                                    
+       16 -- **Como provei que funciona:** (números, testes, prints)     
+       17 -- **PR:**                                                     
+       24 +- **Situação:** pronta.                                       
+       25 +- **Qual era o problema:** dois erros em `listarTarefas`:     
+       26 +  - **Não descia a árvore.** Filtrava `empresa_id === empresaI
+          +d`, e o Grupo Aurora não tem tarefas diretas, então a tela abr
+          +ia vazia. O parâmetro `empresas` era recebido e nunca usado.  
+       27 +  - **Excluía as duas pontas do período.** Usava `>` e `<`, en
+          +tão sumiam as tarefas criadas no primeiro **e** no último dia 
+          +do filtro.                                                    
+       28 +- **Como provei que funciona:**                               
+       29 +  - 15 testes de `listarTarefas` cobrindo cada empresa, mais d
+          +e um nível de árvore, árvore com ciclo, as duas pontas, períod
+          +o de um dia e datas vazias.                                   
+       30 +  - 1 teste que renderiza a tela real: ela abre com 13 tarefas
+          + do grupo e sem a Outra Empresa.                              
+       31 +  - Com o código da `main`, 10 dos 16 falham.                 
+       32 +- **PR:** [#3](https://github.com/edylson02-art/Prova-Pr-tica-
+          +/pull/3)                                                      
+       33  
+       34  ## Tarefa 2 — Relatório de vendas
+       35  
+       21 -- **Situação:**                                               
+       22 -- **Qual era o problema:**                                    
+       36 +- **Situação:** pronta.                                       
+       37 +- **Qual era o problema:** três erros somados:                
+       38 +  - **Dia em UTC.** O dia era calculado com `slice(0, 10)` sob
+          +re o horário em UTC, então vendas das 21h às 23h59 de Brasília
+          + caíam no dia seguinte.                                       
+       39 +  - **Vendas repetidas.** A sincronização repete vendas (V-099
+          +2, V-0994, V-0997), e elas eram somadas duas vezes.           
+       40 +  - **Ticket médio errado.** Dividia por todas as vendas do di
+          +a, incluindo canceladas e repetidas.                          
+       41  - **Como provei que funciona:**
+       24 -- **PR:**                                                     
+       42 +  - `npm run relatorio -- 2026-10-01` → **R$ 3.400,50**, que b
+          +ate com o financeiro. O ticket médio ficou em R$ 680,10.      
+       43 +  - 18 testes, incluindo os 4 dias reais do arquivo (os outros
+          + dias também estavam errados) e a virada do dia às 02:59:59Z e
+          + 03:00:00Z.                                                   
+       44 +  - Mesmo resultado com o computador em UTC, Tóquio e Los Ange
+          +les.                                                          
+       45 +  - Com o código da `main`, 13 dos 18 falham.                 
+       46 +- **PR:** [#2](https://github.com/edylson02-art/Prova-Pr-tica-
+          +/pull/2)                                                      
+       47  
+       48  ## Tarefa 3 — Cliente vendo dado de outra empresa
+       49  
+       28 -- **Situação:**                                               
+       29 -- **Qual era o problema:**                                    
+       50 +- **Situação:** pronta.                                       
+       51 +- **Qual era o problema:** três falhas no `schema.sql`:       
+       52 +  - **Política aberta.** A política `tarefas_importacao` (`for
+          + all using (true)`) liberava leitura e escrita de tudo para to
+          +dos. Políticas permissivas se combinam com OU, então ela anula
+          +va as outras.                                                 
+       53 +  - **Leitura sem a árvore.** A `tarefas_leitura` comparava só
+          + a própria empresa, sem descer a árvore.                      
+       54 +  - **Árvore alterável.** A tabela `empresas` não tinha RLS e 
+          +aceitava `update`. Logada como Outra Empresa, consegui pendura
+          +r o Grupo Aurora embaixo dela.                                
+       55  - **Como provei que funciona:**
+       31 -- **PR:**                                                     
+       56 +  - Logada como Vértice, `npm run db -- 3 "select ... from tar
+          +efas"` agora traz só as 4 tarefas da Vértice.                 
+       57 +  - 32 testes no mesmo banco em memória do `scripts/db.js`:   
+       58 +    - o que cada uma das 5 empresas vê (tarefas e empresas);  
+       59 +    - criar, alterar, mover e apagar dentro e fora da árvore; 
+       60 +    - sessão sem empresa;                                     
+       61 +    - alteração da árvore e ciclos.                           
+       62 +  - Com o schema da `main`, 29 dos 32 falham. Os 3 que passam 
+          +são operações permitidas nos dois.                            
+       63 +- **PR:** [#1](https://github.com/edylson02-art/Prova-Pr-tica-
+          +/pull/1)                                                      
+       64  
+       65  ## Tarefa 4 — Prazo em dias úteis
+       66  
+       35 -- **Situação:**                                               
+       36 -- **Qual API de feriados usei e por quê:**                    
+       67 +- **Situação:** pronta.                                       
+       68 +- **Qual API de feriados usei e por quê:** **[BrasilAPI](https
+          +://brasilapi.com.br/docs#tag/Feriados-Nacionais)** (`/api/feri
+          +ados/v1/<ano>`).                                              
+       69 +  - É brasileira, pública e gratuita, e não exige chave (nenhu
+          +m segredo no repositório).                                    
+       70 +  - Devolve só os feriados nacionais, já com os móveis e com a
+          + Consciência Negra (nacional desde a Lei 14.759/2023).        
+       71 +  - Comparei com Nager.Date (não é brasileira), Invertexto (ex
+          +ige token) e Calendarific (exige token e tem plano pago).     
+       72 +  - `data/feriados-2026.json` foi gerado por `npm run feriados
+          + -- 2026`, sem datas digitadas à mão.                         
+       73  - **Como provei que funciona:**
+       38 -- **PR:**                                                     
+       74 +  - 30 testes de `prazoSLA` com o arquivo real de feriados:   
+       75 +    - o caso do chamado: criada na sexta 02/10 com 1 dia, venc
+          +e na **segunda 05/10**;                                       
+       76 +    - cada feriado do segundo semestre, feriado no fim de sema
+          +na e criação no sábado ou num feriado;                        
+       77 +    - virada do ano, prazo de 0 dias e entradas inválidas.    
+       78 +  - 18 testes do comando: ano malicioso (`../../etc`), respost
+          +a vazia ou incompleta, erro HTTP e limite de tempo.           
+       79 +  - Mesmo resultado em 5 fusos (incluindo UTC+14).            
+       80 +  - Com o código da `main`, 23 dos 30 testes de prazo falham. 
+       81 +- **PR:** [#5](https://github.com/edylson02-art/Prova-Pr-tica-
+          +/pull/5)                                                      
+       82  
+       83  ## Tarefa 5 — Exportar para o Excel
+       84  
+       42 -- **Situação:**                                               
+       43 -- **Qual era o problema:**                                    
+       85 +- **Situação:** pronta.                                       
+       86 +- **Qual era o problema:** cinco defeitos:                    
+       87 +  - **Tudo numa coluna.** O separador era `,`, e o Excel em po
+          +rtuguês espera `;`.                                           
+       88 +  - **Acentos estranhos.** O arquivo não tinha BOM, e o Excel 
+          +o abria na codificação do Windows.                            
+       89 +  - **Colunas quebradas.** Não havia aspas, então a tarefa 112
+          + (`"Vendas 2026"; turma 1`) quebrava as colunas.              
+       90 +  - **Fórmula executada.** A tarefa 114 (`=SOMA(...)`) **seria
+          + executada como fórmula** no Excel.                           
+       91 +  - **Data no formato errado:** saía em ISO.                  
+       92 +  - Além disso, não havia botão na tela.                      
+       93  - **Como provei que funciona:**
+       45 -- **PR:**                                                     
+       94 +  - 23 testes com um leitor que segue as regras do Excel em po
+          +rtuguês. Todas as 15 tarefas reais saem com 4 colunas e o títu
+          +lo intacto.                                                   
+       95 +  - Títulos com `;`, aspas, vírgula e quebra de linha continua
+          +m numa coluna só.                                             
+       96 +  - 6 tipos de fórmula viram texto, inclusive no campo `status
+          +`.                                                            
+       97 +  - O arquivo baixado começa com os bytes do BOM (`EF BB BF`).
+       98 +  - 1 teste confirma que o botão aparece na tela.             
+       99 +  - Com o código da `main`, 22 dos 23 falham.                 
+      100 +- **PR:** [#4](https://github.com/edylson02-art/Prova-Pr-tica-
+          +/pull/4)                                                      
+      101  
+      102  ## Encontrei também
+      103  
+       49 -<!-- Qualquer outro problema que viu no projeto, mesmo que não
+          - tenha sido pedido. -->                                       
+      104 +**Segurança (não resolvidos, porque exigem mudar arquitetura o
+          +u tabelas):**                                                 
+      105 +- **A empresa logada pode ser trocada por quem executa SQL.** 
+          +`app.empresa_id` é uma configuração de sessão, e qualquer pape
+          +l pode alterá-la com `set_config`. Testei: numa única consulta
+          +, a Vértice se passa pelo Grupo Aurora. A proteção vale enquan
+          +to só o servidor monta o SQL, e uma falha de SQL injection vir
+          +a acesso ao grupo inteiro. A solução definitiva é tirar a empr
+          +esa de uma identidade autenticada (claims do JWT ou uma tabela
+          + usuário→empresa).                                            
+      106 +- **O navegador recebe os dados de todas as empresas.** O `App
+          +.jsx` embute o `data/tarefas.json` inteiro, e o seletor deixa 
+          +escolher qualquer empresa, inclusive a Outra Empresa S.A. Filt
+          +rar na tela não protege nada. Com login, a tela deveria buscar
+          + as tarefas do servidor, já filtradas pela RLS.               
+      107 +- **É possível descobrir se um id de tarefa existe em outra em
+          +presa.** Inserir o id 107 (da empresa 5) logada como Vértice d
+          +á `duplicate key`. Isso revela que o id existe, mas não o cont
+          +eúdo.                                                         
+      108 +- **Views sobre `tarefas`** criadas pelo dono ignoram a RLS; p
+          +recisam de `with (security_invoker = true)` (comentado no sche
+          +ma).                                                          
+      109 +- **A importação do chamado #412** precisa rodar com um papel 
+          +administrativo (superusuário ou `BYPASSRLS`), não com o da apl
+          +icação.                                                       
+      110  
+      111 +**Dependências:** `npm audit` aponta 5 vulnerabilidades (2 crí
+          +ticas).                                                       
+      112 +- O `esbuild` ≤ 0.24.2 deixa qualquer site ler o servidor de d
+          +esenvolvimento (GHSA-67mh-4wv8-2f99).                         
+      113 +- Também há falhas no `tinypool` e no `@vitest/mocker`.       
+      114 +- Todas são só do ambiente de desenvolvimento, e a correção ex
+          +ige atualizar versões principais do Vite e do Vitest. Não fiz 
+          +isso dentro das tarefas para não misturar assuntos. Enquanto i
+          +sso, não rodar `vite --host`.                                 
+      115 +                                                              
+      116 +**Decisões de negócio que tomei e merecem confirmação:**      
+      117 +- **Carnaval e Corpus Christi contam como feriado.** A BrasilA
+          +PI os marca como nacionais, mas pela lei são ponto facultativo
+          +. Segui a API porque o README pede para não digitar datas à mã
+          +o.                                                            
+      118 +- **Vendas repetidas: vale a última ocorrência de cada `id`.**
+          + Se a sincronização tiver um campo de atualização, essa regra 
+          +deveria usá-lo.                                               
+      119 +- **CSV:** o `'` que neutraliza fórmulas aparece na célula. Ta
+          +mbém afeta títulos legítimos que começam com `-` ou `+`.      
+      120 +- **O SLA de 3 dias úteis está fixo na tela.** Se cada cliente
+          + tiver o seu, deveria vir do contrato.                        
+      121 +                                                              
+      122 +**Outros:**                                                   
+      123 +- **Sem controle de valores:** a tabela `tarefas` aceita qualq
+          +uer texto em `status`.                                        
+      124 +- **Sem índices:** não há índices em `empresa_id` e `pai_id`. 
+      125 +- **`scripts/relatorio.js` aceitava qualquer texto como dia:**
+          + `01/10/2026` mostrava R$ 0,00 sem aviso. Corrigido no PR #2. 
+      126 +- **Testes originais:** os 2 que existiam passavam por coincid
+          +ência dos dados escolhidos.                                   
+      127 +                                                              
+      128  ## O que ficou faltando / o que eu faria com mais tempo
+      129  
+      130 +- **Conferência manual:** não abri o CSV no Excel nem cliquei 
+          +no botão em um navegador. Os testes cobrem a geração do arquiv
+          +o e o botão na tela, mas o clique em si não tem teste automati
+          +zado, porque o projeto não tem jsdom e não quis adicionar depe
+          +ndência só para isso.                                         
+      131 +- **Concorrência na árvore:** o gatilho contra ciclos não foi 
+          +testado com duas conexões simultâneas, porque o PGlite tem uma
+          + conexão só. Faria esse teste num Postgres real.              
+      132 +- **Testes do banco lentos (~45 s):** cada teste de escrita so
+          +be um banco novo. Com mais tempo, usaria transação com rollbac
+          +k por teste.                                                  
+      133 +- **Identidade autenticada:** trocaria o `app.empresa_id` por 
+          +uma identidade autenticada, o que fecha a brecha do `set_confi
+          +g`.                                                           
+      134 +- **Coluna "Empresa":** com o Grupo Aurora escolhido, a tabela
+          + mistura três empresas sem dizer de qual é cada tarefa.       
+      135 +- **Dependências:** um PR separado para atualizar o Vite e o V
+          +itest e zerar o `npm audit`.                                  
+
+  Ran 1 shell command, wrote 1 memory (ctrl+o to expand)
+
+● Escrito para: os avaliadores da prova, que vão ler o STATUS.md no repositório.
+
+  Preenchi o STATUS.md e fiz commit e push na main:
+  https://github.com/edylson02-art/Prova-Pr-tica-/blob/main/STATUS.md
+
+  O arquivo tem:
+  - Seu nome e o tempo: Edilson Santos, ~1h40.
+  - Ordem de trabalho e o porquê (3 → 2 → 1 → 5 → 4). Também conta que fiz a
+    auditoria antes de mexer no código, que ataquei a correção da Tarefa 3 antes
+    de escrevê-la e que fiz o ensaio juntando as 5 branches.
+  - Cada tarefa: situação, problema, como provei (testes, números e quantos
+    testes falham com o código antigo) e o link do PR.
+  - "Encontrei também":
+    - os riscos de segurança que continuam: a troca de empresa via set_config,
+      os dados de todas as empresas no navegador, a descoberta de ids e as
+      views;
+    - as 5 vulnerabilidades do npm audit;
+    - as decisões de negócio que tomei: Carnaval, vendas repetidas, o apóstrofo
+      no CSV e o SLA fixo;
+    - problemas menores do banco.
+  - O que ficou faltando: sem teste manual no Excel nem clique no botão em um
+    navegador, o gatilho de ciclos não foi testado com duas conexões, os testes
+    do banco estão lentos e falta a atualização das dependências.
+
+  Os 5 PRs continuam abertos e não conflitam com esse commit, porque nenhuma
+  branch mexe no STATUS.md.
+
+  Faltam dois passos, e os dois são com você:
+  1. Salvar o histórico da sessão. Rode /export aqui no Claude Code e salve o
+     arquivo em G:\Prova-Pr-tica-\sessoes\. Depois me avise, que eu faço o
+     commit e o push na main. Faça isso por último, para o histórico incluir
+     tudo, inclusive este commit.
+  2. Mandar o link do repositório pelo WhatsApp:
+     https://github.com/edylson02-art/Prova-Pr-tica-
