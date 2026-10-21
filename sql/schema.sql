@@ -107,3 +107,21 @@ create policy tarefas_exclusao on tarefas
 -- (set_config('app.empresa_id', ...)). O servidor continua gravando
 -- app.empresa_id, porque chama set_config antes do "set role".
 revoke execute on function pg_catalog.set_config(text, text, boolean) from public;
+
+-- Pelo mesmo motivo, sem blocos DO: "do $$ begin reset role; ... end $$" volta
+-- a superusuário dentro de uma consulta só. Funções plpgsql criadas aqui (o
+-- gatilho de ciclos) continuam rodando: o uso da linguagem só é exigido de
+-- quem cria a função, não de quem a dispara. A linguagem sql não aceita DO.
+revoke usage on language plpgsql from public;
+
+-- Travas consultivas: a pessoa logada poderia segurar para sempre a trava que o
+-- gatilho de ciclos usa e bloquear qualquer mudança na árvore. O gatilho é
+-- security definer e continua podendo usá-las.
+do $$
+declare
+  f regprocedure;
+begin
+  for f in select oid::regprocedure from pg_proc where proname like 'pg\_%advisory\_%' loop
+    execute format('revoke execute on function %s from public', f);
+  end loop;
+end $$;
