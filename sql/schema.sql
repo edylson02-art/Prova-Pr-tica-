@@ -99,3 +99,11 @@ create policy tarefas_alteracao on tarefas
 create policy tarefas_exclusao on tarefas
   for delete
   using (empresa_id in (select empresas_visiveis()));
+
+-- Quem está logado não pode mudar a própria sessão. O servidor conecta como
+-- superusuário e faz "set role app_user"; com set_config, uma única consulta
+-- desfazia isso (set_config('role', 'none', ...) → volta a superusuário e
+-- passa por cima de todas as políticas) ou trocava a empresa
+-- (set_config('app.empresa_id', ...)). O servidor continua gravando
+-- app.empresa_id, porque chama set_config antes do "set role".
+revoke execute on function pg_catalog.set_config(text, text, boolean) from public;
