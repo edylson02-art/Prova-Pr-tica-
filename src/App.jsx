@@ -2,6 +2,7 @@ import { useState } from 'react';
 import empresas from '../data/empresas.json';
 import tarefas from '../data/tarefas.json';
 import { listarTarefas } from './tarefas.js';
+import { baixarCSV } from './exportar.js';
 
 export function App() {
   const [empresaId, setEmpresaId] = useState(1);
@@ -21,6 +22,14 @@ export function App() {
         </select>
         <label>De <input type="date" value={de} onChange={(e) => setDe(e.target.value)} /></label>
         <label>Até <input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></label>
+        {/* exporta exatamente o que está na tela (empresa e período escolhidos) */}
+        <button
+          type="button"
+          disabled={lista.length === 0}
+          onClick={() => baixarCSV(lista, `tarefas_${de || 'inicio'}_a_${ate || 'hoje'}.csv`)}
+        >
+          Exportar CSV
+        </button>
       </div>
       {lista.length === 0 ? (
         <p>Nenhuma tarefa no período.</p>
